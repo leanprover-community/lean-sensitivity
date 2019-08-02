@@ -1,3 +1,4 @@
+import tactic
 import data.real.basic
 import linear_algebra.dual
 import ring_theory.ideals
@@ -111,21 +112,21 @@ lemma e_succ_apply {n} (x : Q (n+1)) :
   e x = cond (x 0) (e (x ∘ fin.succ), 0) (0, e (x ∘ fin.succ)) := rfl
 
 lemma e.is_basis (n) : is_basis ℝ (e : Q n → V n) :=
-begin
-  induction n with n ih,
-  { split,
-    { apply linear_map.ker_eq_bot'.mpr,
-      intros v hv,
-      dsimp [finsupp.total, e_zero_apply, finsupp.lsum, linear_map.smul_right] at hv,
-      },
-    { refine (ideal.eq_top_iff_one _).mpr (submodule.subset_span _),
-      rw set.mem_range, exact ⟨(λ _, tt), rfl⟩ } },
-  convert (is_basis_inl_union_inr ih ih).comp (Q.equiv_sum n) (Q.equiv_sum n).bijective,
-  funext x,
-  dsimp only [function.comp, Q.equiv_sum, e_apply],
-  cases h : x 0;
-  { simp only [bool.cond_tt, bool.cond_ff, prod.mk.inj_iff, sum.elim_inl, sum.elim_inr, cond],
-    exact ⟨rfl, rfl⟩ }
+begin sorry
+  -- induction n with n ih,
+  -- { split,
+  --   { apply linear_map.ker_eq_bot'.mpr,
+  --     intros v hv,
+  --     dsimp [finsupp.total, e_zero_apply, finsupp.lsum, linear_map.smul_right] at hv, sorry
+  --     },
+  --   { refine (ideal.eq_top_iff_one _).mpr (submodule.subset_span _),
+  --     rw set.mem_range, exact ⟨(λ _, tt), rfl⟩ } },
+  -- convert (is_basis_inl_union_inr ih ih).comp (Q.equiv_sum n) (Q.equiv_sum n).bijective,
+  -- funext x,
+  -- dsimp only [function.comp, Q.equiv_sum, e_apply],
+  -- cases h : x 0;
+  -- { simp only [bool.cond_tt, bool.cond_ff, prod.mk.inj_iff, sum.elim_inl, sum.elim_inr, cond],
+  --   exact ⟨rfl, rfl⟩ }
 end
 
 /-- The linear operator f_n corresponding to Huang's matrix A_n. -/
@@ -165,12 +166,47 @@ def g (m : ℕ) : V m →ₗ[ℝ] V (m+1) :=
 linear_map.pair (f m + real.sqrt (m+1) • linear_map.id) linear_map.id
 
 lemma g_injective {m : ℕ} : function.injective (g m) :=
-sorry
+begin
+  rw[g], intros x₁ x₂ H_eq, simp at *, exact H_eq.right
+end
+
+@[simp] lemma f_0 {x} : (f 0).to_fun x = 0 := rfl
+
+lemma f_image_g_aux₁ (m : ℕ) (w_fst w_snd : V (m + 0)) (hv_w : V m) (h_1 : w_fst = (f m) w_snd + real.sqrt (1 + ↑m) • w_snd)
+: ((f (m + 1)).to_fun (w_fst, w_snd)).fst = real.sqrt (1 + nat.cast m) • w_fst :=
+begin
+  subst h_1, simp at *, unfold_coes,
+  rw[f], change (linear_map.copair (f m) linear_map.id).to_fun _ = _,
+  change _ + _ = _, tidy,
+  sorry
+end
+-- begin
+--   subst h_1, induction m with m ih,
+--     {dsimp at *, simp at *, unfold_coes,
+--      rw[f_0], change ((f 1).to_fun (w_snd, w_snd)).fst = _, 
+--      rw[f],
+--     change (linear_map.copair (f 0) linear_map.id) _ = _,
+--     change 0 + w_snd = _, simp,
+--     have this : 1 + nat.cast 0 = (1 : ℝ),
+--       by {convert_to 1 + 0 = (1 : ℝ), simp},
+--     simp[this]
+--       },
+--     {sorry}
+-- end
+
+lemma f_image_g_aux₂ (m : ℕ) (w_fst w_snd : V (m + 0)) (hv_w : V m) (h_1 : w_fst = (f m) w_snd + real.sqrt (1 + ↑m) • w_snd)
+  : ((f (m + 1)).to_fun (w_fst, w_snd)).snd = real.sqrt (1 + nat.cast m) • w_snd :=
+by {rw[f], change (linear_map.copair _ _).to_fun _ = _, change _ + _ = _, subst h_1, tidy}
 
 -- I don't understand why the type ascription is necessary here, when f_squared worked fine
 lemma f_image_g {m : ℕ} (w : V (m + 1)) (hv : ∃ v, w = g m v) :
   (f (m + 1) : V (m + 1) → V (m + 1)) w = real.sqrt (m + 1) • w :=
-sorry
+begin
+  /- `tidy` says -/ cases hv, cases w, dsimp at *, simp at *, tactic.ext1 [] {new_goals := tactic.new_goals.all}, work_on_goal 0 { dsimp at *, injections_and_clear, dsimp at *, induction h_2, simp at *, unfold_coes }, work_on_goal 1 { dsimp at *, injections_and_clear, dsimp at *, induction h_2, simp at *, unfold_coes },
+  {apply f_image_g_aux₁; from ‹_› },
+  {apply f_image_g_aux₂; from ‹_› }
+end
+
 
 variables {m : ℕ} (H : set (Q (m + 1))) (hH : fintype.card H ≥ 2^m + 1)
 include hH
