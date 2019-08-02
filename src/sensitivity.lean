@@ -4,7 +4,8 @@ import ring_theory.ideals
 
 local attribute [instance, priority 1] classical.prop_decidable
 noncomputable theory
-local attribute [instance, priority 0] classical.prop_decidable
+local attribute [instance, priority 1] classical.prop_decidable
+local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
 /-- The hypercube.-/
 def Q (n) : Type := fin n → bool
@@ -158,9 +159,6 @@ def ε {n : ℕ} : Q n → (V n →ₗ[ℝ] ℝ) :=
 axiom f_matrix_adjacent {n : ℕ} (p q : Q n) (h : p.adjacent q) : abs (ε q (f n (e p))) = 1
 axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : ¬ p.adjacent q) : ε q (f n (e p)) = 0
 
-axiom f_matrix_adjacent {n : ℕ} (p q : Q n) (h : adjacent p q) : abs (ε q (f n (e p))) = 1
-axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : ¬ adjacent p q) : ε q (f n (e p)) = 0
-
 /-- The linear operator g_n corresponding to Knuth's matrix B_n.
   We adopt the convention n = m+1. -/
 def g (m : ℕ) : V m →ₗ[ℝ] V (m+1) :=
@@ -174,13 +172,13 @@ lemma f_image_g {m : ℕ} (w : V (m + 1)) (hv : ∃ v, w = g m v) :
   (f (m + 1) : V (m + 1) → V (m + 1)) w = real.sqrt (m + 1) • w :=
 sorry
 
-variables {m : ℕ} (H : finset (Q (m + 1))) (hH : H.card ≥ 2^m + 1)
+variables {m : ℕ} (H : set (Q (m + 1))) (hH : fintype.card H ≥ 2^m + 1)
 include hH
 
 lemma exists_eigenvalue :
-  ∃ y ∈ submodule.span ℝ (e '' H.to_set) ⊓ (g m).range, y ≠ (0 : _) :=
+  ∃ y ∈ submodule.span ℝ (e '' H) ⊓ (g m).range, y ≠ (0 : _) :=
 sorry                           -- Dimension argument
 
 theorem degree_theorem :
-  ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ (H.filter (adjacent q)).card :=
+  ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ fintype.card {p // p ∈ H ∧ q.adjacent p} :=
 sorry
