@@ -56,8 +56,9 @@ begin
       simp [IH, this] } }
 end
 
-/-- The hypercube Q^n. -/
-constant Q : ℕ → Type
+/-- The hypercube. -/
+def Q (n : ℕ) : Type := fin n → bool
+instance {n : ℕ} : fintype (Q n) := by delta Q; apply_instance
 
 /-- The adjacency relation on Q^n. -/
 constant adjacent {n : ℕ} (p q : Q n) : Prop
@@ -83,4 +84,15 @@ sorry
 -- I don't understand why the type ascription is necessary here, when f_squared worked fine
 lemma f_image_g {m : ℕ} (w : V (m + 1)) (hv : ∃ v, w = g m v) :
   (f (m + 1) : V (m + 1) → V (m + 1)) w = real.sqrt (m + 1) • w :=
+sorry
+
+variables {m : ℕ} (H : finset (Q (m + 1))) (hH : H.card ≥ 2^m + 1)
+include hH
+
+lemma exists_eigenvalue :
+  ∃ y ∈ submodule.span ℝ (e '' H.to_set) ⊓ (g m).range, y ≠ (0 : _) :=
+sorry                           -- Dimension argument
+
+theorem degree_theorem :
+  ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ (H.filter (adjacent q)).card :=
 sorry
