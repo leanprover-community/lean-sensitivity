@@ -1,5 +1,6 @@
 import data.real.basic
 import linear_algebra.dual
+import ring_theory.ideals
 
 local attribute [instance, priority 1] classical.prop_decidable
 noncomputable theory
@@ -68,10 +69,6 @@ def equiv_sum : Q (n+1) ≃ Q n ⊕ Q n :=
       exact nat.succ_ne_zero _ }
   end }
 
-theorem sensitivity (H : finset (Q n)) (x) (h : x ∈ H) :
-  real.sqrt n ≤ (H.filter (neighbours x)).card :=
-sorry
-
 end Q
 
 /-- The free vector space on vertices of a hypercube, defined inductively. -/
@@ -102,25 +99,29 @@ begin
 end
 
 /-- The basis of V indexed by the hypercube.-/
-def b : Π n, Q n → V n
+def e : Π n, Q n → V n
 | 0     := λ _, (1:ℝ)
-| (n+1) := λ v, if v n = tt
-           then (b n (v ∘ fin.succ), 0)
-           else (0, b n (v ∘ fin.succ))
+| (n+1) := λ v, cond (v 0) (e n (v ∘ fin.succ), 0) (0, e n (v ∘ fin.succ))
 
-lemma total_bijective (n) :
-  function.bijective (finsupp.total (Q n) (V n) ℝ (b n)) :=
-begin
-  split,
-  { rw [← linear_map.ker_eq_bot, linear_map.ker_eq_bot'],
-    intros v hv, }
-end
+-- lemma total_bijective (n) :
+--   function.bijective (finsupp.total (Q n) (V n) ℝ (e n)) :=
+-- begin
+--   split,
+--   { rw [← linear_map.ker_eq_bot, linear_map.ker_eq_bot'],
+--     intros v hv, }
+-- end
 
-lemma b.is_basis (n) : is_basis ℝ (b n) :=
+lemma e.is_basis (n) : is_basis ℝ (e n) :=
 begin
-  split,
-  { apply linear_map.ker_eq_bot'.mpr,
-    intros v hv, }
+  induction n with n ih,
+  { split,
+    { apply linear_map.ker_eq_bot'.mpr,
+      intros v hv, sorry },
+    { refine (ideal.eq_top_iff_one _).mpr (submodule.subset_span _),
+      rw set.mem_range, exact ⟨(λ _, tt), rfl⟩ } },
+  convert (is_basis_inl_union_inr ih ih).comp (Q.equiv_sum n) (Q.equiv_sum n).bijective,
+  funext x,
+  dsimp [function.comp],
 end
 
 /-- The linear operator f_n corresponding to Huang's matrix A_n. -/
@@ -148,18 +149,14 @@ begin
       simp [IH, this] } }
 end
 
-/-- The hypercube Q^n. -/
-constant Q : ℕ → Type
-
-/-- The adjacency relation on Q^n. -/
-constant adjacent {n : ℕ} (p q : Q n) : Prop
-
-/-- The basis of V_n, indexed on Q^n. -/
-constant e {n : ℕ} : Q n → V n
-axiom is_basis_e {n : ℕ} : is_basis ℝ (@e n)
-
 def ε {n : ℕ} : Q n → (V n →ₗ[ℝ] ℝ) :=
-is_basis_e.dual_basis
+(e.is_basis n).dual_basis
 
-axiom f_matrix_adjacent {n : ℕ} (p q : Q n) (h : adjacent p q) : abs (ε q (f n (e p))) = 1
-axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : ¬ adjacent p q) : ε q (f n (e p)) = 0
+axiom f_matrix_adjacent {n : ℕ} (p q : Q n) (h : p.adjacent q) : abs (ε q (f n (e p))) = 1
+axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : ¬ p.adjacent q) : ε q (f n (e p)) = 0
+
+
+
+theorem sensitivity (H : finset (Q n)) (x) (h : x ∈ H) :
+  real.sqrt n ≤ (H.filter (neighbours x)).card :=
+sorry
