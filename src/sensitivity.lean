@@ -71,3 +71,16 @@ is_basis_e.dual_basis
 
 axiom f_matrix_adjacent {n : ℕ} (p q : Q n) (h : adjacent p q) : abs (ε q (f n (e p))) = 1
 axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : ¬ adjacent p q) : ε q (f n (e p)) = 0
+
+/-- The linear operator g_n corresponding to Knuth's matrix B_n.
+  We adopt the convention n = m+1. -/
+def g (m : ℕ) : V m →ₗ[ℝ] V (m+1) :=
+linear_map.pair (f m + real.sqrt (m+1) • linear_map.id) linear_map.id
+
+lemma g_injective {m : ℕ} : function.injective (g m) :=
+sorry
+
+-- I don't understand why the type ascription is necessary here, when f_squared worked fine
+lemma f_image_g {m : ℕ} (w : V (m + 1)) (hv : ∃ v, w = g m v) :
+  (f (m + 1) : V (m + 1) → V (m + 1)) w = real.sqrt (m + 1) • w :=
+sorry
