@@ -1,4 +1,5 @@
 import tactic
+import tactic.fin_cases
 import data.real.basic
 import linear_algebra.dual
 import ring_theory.ideals
@@ -10,6 +11,12 @@ local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
 /-- The hypercube.-/
 def Q (n) : Type := fin n → bool
+
+/-- The only element of Q0 -/
+def eQ0 : Q 0 := λ _, tt
+
+lemma Q0_unique (p : Q 0) : p = eQ0 :=
+by { ext x, fin_cases x }
 
 namespace Q
 variable (n : ℕ)
@@ -157,11 +164,114 @@ begin
       simp [IH, this] } }
 end
 
-def ε {n : ℕ} : Q n → (V n →ₗ[ℝ] ℝ) :=
-(e.is_basis n).dual_basis
+/-- The dual basis to e -/
+noncomputable def ε : Π {n : ℕ} (p : Q n), V n →ₗ[ℝ] ℝ
+| 0 _ := linear_map.id
+| (n+1) p := cond (p 0) ((ε $ p ∘ fin.succ).comp $ linear_map.fst _ _ _) ((ε $ p ∘ fin.succ).comp $ linear_map.snd _ _ _)
 
-axiom f_matrix_adjacent {n : ℕ} (p q : Q n) (h : p.adjacent q) : abs (ε q (f n (e p))) = 1
-axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : ¬ p.adjacent q) : ε q (f n (e p)) = 0
+lemma fin.succ_ne_zero {n} (k : fin n) : fin.succ k ≠ 0 :=
+begin
+  cases k with k hk,
+  intro h,
+  have : k + 1 = 0 := (fin.ext_iff _ _).1 h,
+  finish
+end
+
+open bool
+
+lemma Q_succ_n_eq {n} (p q : Q (n+1)) : p = q ↔ (p 0 = q 0 ∧ p ∘ fin.succ = q ∘ fin.succ) :=
+begin
+  split,
+  { intro h, split ; rw h ; refl, },
+  { rintros ⟨h₀, h⟩,
+    ext x,
+    by_cases hx : x = 0,
+    { rwa hx },
+    rw ← fin.succ_pred x hx,
+    convert congr_fun h (fin.pred x hx) }
+end
+
+-- Where is this in the lib??
+lemma bool_cases (b : bool) : b = tt ∨ b = ff :=
+by cases b ; finish
+
+lemma duality {n : ℕ} (p q : Q n) : ε p (e q) = if p = q then 1 else 0 :=
+begin
+  induction n with n IH,
+  { dsimp [ε, e],
+    simp [Q0_unique p, Q0_unique q] },
+  { cases bool_cases (p 0) with hp hp ; cases bool_cases (q 0) with hq hq,
+    all_goals { 
+      dsimp [ε, e],
+      rw [hp, hq],
+      repeat {rw cond_tt},
+      repeat {rw cond_ff},
+      simp only [linear_map.fst_apply, linear_map.snd_apply, linear_map.comp_apply] }, 
+    { rw IH,
+      congr'  1,
+      rw Q_succ_n_eq,
+      finish },
+    { erw (ε _).map_zero,
+      have : p ≠ q,
+      { intro h,
+        rw Q_succ_n_eq p q at h,
+        finish },
+      simp [this] },
+    { erw (ε _).map_zero,
+      have : p ≠ q,
+      { intro h,
+        rw Q_succ_n_eq p q at h,
+        finish },
+      simp [this] },
+    { rw IH,
+      congr'  1,
+      rw Q_succ_n_eq,
+      finish } }
+end
+
+/-- The adjacency relation on Q^n. -/
+def adjacent : Π {n : ℕ}, Q n → Q n → Prop
+| 0 p q := false
+| (n+1) p q := (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨ (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ)
+
+lemma f_matrix {n} : ∀ (p q : Q n), abs (ε q (f n (e p))) = if adjacent p q then 1 else 0 :=
+begin
+  induction n with n IH,
+  { intros p q,
+    dsimp [f, adjacent],
+    simp [Q0_unique p, Q0_unique q] },
+   { intros p q,
+    have ite_nonneg : ite (q ∘ fin.succ = p ∘ fin.succ) (1 : ℝ) 0 ≥ 0,
+    { by_cases h : q ∘ fin.succ = p ∘ fin.succ; simp [h] ; norm_num },
+    cases bool_cases (p 0) with hp hp ; cases bool_cases (q 0) with hq hq,
+    all_goals { 
+      dsimp [e, ε, f, adjacent],
+      rw [hp, hq],
+      repeat { rw cond_tt },
+      repeat { rw cond_ff },
+      simp only [add_zero, linear_map.id_apply, linear_map.fst_apply, linear_map.snd_apply,
+                 cond, cond_tt, cond_ff, linear_map.neg_apply,
+                 linear_map.copair_apply, linear_map.comp_apply],
+      try { erw (f n).map_zero },
+      try { simp only [linear_map.map_zero, add_comm, zero_add, linear_map.map_add, neg_zero, add_zero] } },
+    { rw IH,
+      congr' 1, apply propext,
+      simp [hp, hq] },
+    { rw [duality, abs_of_nonneg ite_nonneg], 
+      simp only [true_and, false_or, not_false_iff, false_and],
+      congr' 1,
+      apply propext, 
+      rw eq_comm, },
+    { rw [duality, abs_of_nonneg ite_nonneg], 
+      simp only [true_and, false_or, not_false_iff, false_and],
+      congr' 1,
+      apply propext, 
+      rw eq_comm, },
+    { simp only [linear_map.map_neg, abs_neg],
+      rw IH,
+      simp, 
+      congr' 1 } }
+end
 
 /-- The linear operator g_n corresponding to Knuth's matrix B_n.
   We adopt the convention n = m+1. -/
