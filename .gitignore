@@ -1,3 +1,8 @@
 *.olean
 /_target
 /leanpkg.path
+
+tex/*.aux
+tex/*.log
+tex/*.out
+tex/*.pdf

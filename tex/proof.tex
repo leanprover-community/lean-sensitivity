@@ -1,0 +1,68 @@
+\documentclass[11pt]{article}
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{hyperref}
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\bool}{\mathtt{bool}}
+
+\pagestyle{empty}
+
+\begin{document}
+
+This is a translation into linear maps of Knuth's ``computational'' reformulation [1] of Huang's proof of the Sensitivity Conjecture [2].
+
+\medskip
+
+Let $(V_n)_{n \ge 0}$ be the sequence of $\RR$-vector spaces defined inductively by
+\[
+  V_0 = \RR, \quad V_{n+1} = V_n \oplus V_n.
+\]
+Each space $V_n$ has an obvious basis $(e_p)_{p \in Q^n}$ indexed on $Q^n = \bool^n$.
+Let $(\varepsilon_p : V_n \to \RR)_{p \in Q^n}$ be the dual linear functionals.
+
+Let $f_n : V_n \to V_n$ be the linear map defined inductively by
+\[
+  f_0 = 0, \quad f_{n+1}(v, w) = (f_n v + w, v - f_n w).
+\]
+By induction $f_n^2 v = n v$.
+Moreover $|\varepsilon_q (f_n e_p)|$ is 1 if $p$ and $q$ are adjacent vertices of the hypercube graph $Q^n$ (which we denote by $p \sim q$) and 0 otherwise.
+
+Now let $g_n : V_{n-1} \to V_n$ be defined by
+\[
+  g_n v = (f_{n-1} v + \sqrt n v, v).
+\]
+Then $g_n$ is injective, so its image is a subspace of $V_n$ of dimension $\dim V_{n-1} = 2^{n-1}$.
+Furthermore for any $w = g_n v$ in this image we have
+\begin{align*}
+  f_n w
+  & = f_n (f_{n-1} v + \sqrt n v, v) \\
+  & = (f_{n-1} f_{n-1} v + \sqrt n f_{n-1} v + v, f_{n-1} v + \sqrt n v - f_{n-1} v) \\
+  & = (\sqrt n f_{n-1} v + n v, \sqrt n v) \\
+  & = \sqrt n w.
+\end{align*}
+
+Let $H$ be a subset of $Q^n$ of cardinality at least $2^{n-1} + 1$.
+The restriction of the basis of $V_n$ to $H$ spans a subspace $W$ of $V_n$ of dimension at least $2^{n-1} + 1$.
+Since the image of $g_n$ has dimension $2^{n-1}$ and $2^{n-1} + 1 + 2^{n-1} > 2^n$, we can find some nonzero vector $y$ belonging to both $W$ and the image of $g_n$, so that $f_n y = \sqrt n y$.
+
+Now write $y = \sum_{p \in H} y_p e_p$ and let $q \in H$ be an index with $|y_q|$ maximal.
+Then
+\begin{align*}
+  |\sqrt n y_q|
+  & = |\varepsilon_q (\sqrt n y)| \\
+  & = \big|\varepsilon_q \big(f_n \big(\sum_{p \in H} y_p e_p \big)\big)\big| \\
+  & \le \sum_{p \in H} |\varepsilon_q (f_n e_p)| |y_p| \\
+  & = \sum_{p \in H, p \sim q} |y_p| \\
+  & \le \sum_{p \in H, p \sim q} |y_q| \\
+  & = |\{\,p \in H \mid p \sim q\,\}| |y_q|
+\end{align*}
+and therefore $q$ has at least $\sqrt n$ neighbors in $H$.
+
+\medskip
+
+[1]: \url{https://www.cs.stanford.edu/~knuth/papers/huang.pdf}
+
+[2]: \url{http://www.mathcs.emory.edu/~hhuan30/papers/sensitivity_1.pdf}
+
+\end{document}
