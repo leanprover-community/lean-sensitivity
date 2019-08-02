@@ -1,8 +1,9 @@
 import data.real.basic
-import linear_algebra.dimension
+import linear_algebra.dual
 
 local attribute [instance, priority 1] classical.prop_decidable
 noncomputable theory
+local attribute [instance, priority 0] classical.prop_decidable
 
 /-- The hypercube.-/
 def Q (n) : Type := fin n → bool
@@ -146,3 +147,19 @@ begin
       have : Π (x y : V n), -x + (y + x) = y := by { intros, abel }, -- ugh
       simp [IH, this] } }
 end
+
+/-- The hypercube Q^n. -/
+constant Q : ℕ → Type
+
+/-- The adjacency relation on Q^n. -/
+constant adjacent {n : ℕ} (p q : Q n) : Prop
+
+/-- The basis of V_n, indexed on Q^n. -/
+constant e {n : ℕ} : Q n → V n
+axiom is_basis_e {n : ℕ} : is_basis ℝ (@e n)
+
+def ε {n : ℕ} : Q n → (V n →ₗ[ℝ] ℝ) :=
+is_basis_e.dual_basis
+
+axiom f_matrix_adjacent {n : ℕ} (p q : Q n) (h : adjacent p q) : abs (ε q (f n (e p))) = 1
+axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : ¬ adjacent p q) : ε q (f n (e p)) = 0
