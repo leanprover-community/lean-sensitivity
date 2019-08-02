@@ -115,8 +115,10 @@ begin
   induction n with n ih,
   { split,
     { apply linear_map.ker_eq_bot'.mpr,
-      intros v hv,
-      dsimp [finsupp.total, e_zero_apply, finsupp.lsum, linear_map.smul_right] at hv,
+      intros v hv, ext i,
+      rw [finsupp.total_apply] at hv,
+      simp only [e_zero_apply, smul_eq_mul, mul_one] at hv,
+      
       },
     { refine (ideal.eq_top_iff_one _).mpr (submodule.subset_span _),
       rw set.mem_range, exact ⟨(λ _, tt), rfl⟩ } },
