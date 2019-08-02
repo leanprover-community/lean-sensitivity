@@ -1,7 +1,77 @@
 import data.real.basic
 import linear_algebra.dimension
 
+local attribute [instance, priority 1] classical.prop_decidable
 noncomputable theory
+
+/-- The hypercube.-/
+def Q (n) : Type := fin n → bool
+
+namespace Q
+variable (n : ℕ)
+
+instance : fintype (Q n) := by delta Q; apply_instance
+
+variable {n}
+
+def xor (x y : Q n) : Q n :=
+λ i, bxor (x i) (y i)
+
+@[symm] lemma xor_comm (x y : Q n) : x.xor y = y.xor x :=
+funext $ λ i, bool.bxor_comm _ _
+
+/-- The distance between two vertices of the hypercube.-/
+def dist (x y : Q n) : ℕ :=
+(finset.univ : finset (fin n)).sum $ λ i, cond (x.xor y i) 1  0
+
+@[simp] lemma dist_self (x : Q n) : x.dist x = 0 :=
+finset.sum_eq_zero $ λ i hi, by simp only [xor, bxor_self, bool.cond_ff]
+
+@[symm] lemma dist_symm (x y : Q n) : x.dist y = y.dist x :=
+congr_arg ((finset.univ : finset (fin n)).sum) $
+by { funext i, simp [xor_comm] }
+
+/-- Two vertices of the hypercube are adjacent if their distance is 1.-/
+def adjacent (x y : Q n) : Prop := x.dist y = 1
+
+/-- The set of n-/
+def neighbours (x : Q n) : set (Q n) := {y | x.adjacent y}
+
+variable (n)
+
+/-- The cardinality of the hypercube.-/
+@[simp] lemma card : fintype.card (Q n) = 2^n :=
+calc _ = _ : fintype.card_fun
+   ... = _ : by simp only [fintype.card_fin, fintype.card_bool]
+
+/-- The (n+1)-dimensional hypercube is equivalent to two copies of the n-dimensional hypercube.-/
+def equiv_sum : Q (n+1) ≃ Q n ⊕ Q n :=
+{ to_fun := λ x, cond (x 0)
+                   (sum.inl (x ∘ fin.succ))
+                   (sum.inr (x ∘ fin.succ)),
+  inv_fun := λ x, sum.rec_on x
+                   (λ y i, if h : i = 0 then tt else y (i.pred h))
+                   (λ y i, if h : i = 0 then ff else y (i.pred h)),
+  left_inv := λ x,
+  begin
+    dsimp only, cases h : x 0;
+    { funext i, dsimp only [bool.cond_tt, bool.cond_ff], split_ifs with H,
+      { rw [H, h] },
+      { rw [function.comp_app, fin.succ_pred] } }
+  end,
+  right_inv := λ x,
+  begin
+    cases x;
+    { simp only [dif_pos, bool.cond_tt, bool.cond_ff, cond, function.comp],
+      funext i, rw [dif_neg, i.pred_succ], rw [fin.ext_iff, fin.succ_val],
+      exact nat.succ_ne_zero _ }
+  end }
+
+theorem sensitivity (H : finset (Q n)) (x) (h : x ∈ H) :
+  real.sqrt n ≤ (H.filter (neighbours x)).card :=
+sorry
+
+end Q
 
 /-- The free vector space on vertices of a hypercube, defined inductively. -/
 def V : ℕ → Type
@@ -28,6 +98,28 @@ begin
   { apply dim_of_field },
   { dunfold V,
     rw [dim_prod, IH, pow_succ, two_mul] }
+end
+
+/-- The basis of V indexed by the hypercube.-/
+def b : Π n, Q n → V n
+| 0     := λ _, (1:ℝ)
+| (n+1) := λ v, if v n = tt
+           then (b n (v ∘ fin.succ), 0)
+           else (0, b n (v ∘ fin.succ))
+
+lemma total_bijective (n) :
+  function.bijective (finsupp.total (Q n) (V n) ℝ (b n)) :=
+begin
+  split,
+  { rw [← linear_map.ker_eq_bot, linear_map.ker_eq_bot'],
+    intros v hv, }
+end
+
+lemma b.is_basis (n) : is_basis ℝ (b n) :=
+begin
+  split,
+  { apply linear_map.ker_eq_bot'.mpr,
+    intros v hv, }
 end
 
 /-- The linear operator f_n corresponding to Huang's matrix A_n. -/
