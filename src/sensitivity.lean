@@ -99,29 +99,32 @@ begin
 end
 
 /-- The basis of V indexed by the hypercube.-/
-def e : Π n, Q n → V n
+def e : Π {n}, Q n → V n
 | 0     := λ _, (1:ℝ)
-| (n+1) := λ v, cond (v 0) (e n (v ∘ fin.succ), 0) (0, e n (v ∘ fin.succ))
+| (n+1) := λ x, cond (x 0) (e (x ∘ fin.succ), 0) (0, e (x ∘ fin.succ))
 
--- lemma total_bijective (n) :
---   function.bijective (finsupp.total (Q n) (V n) ℝ (e n)) :=
--- begin
---   split,
---   { rw [← linear_map.ker_eq_bot, linear_map.ker_eq_bot'],
---     intros v hv, }
--- end
+@[simp] lemma e_zero_apply (x : Q 0) :
+  e x = (1 : ℝ) := rfl
 
-lemma e.is_basis (n) : is_basis ℝ (e n) :=
+lemma e_succ_apply {n} (x : Q (n+1)) :
+  e x = cond (x 0) (e (x ∘ fin.succ), 0) (0, e (x ∘ fin.succ)) := rfl
+
+lemma e.is_basis (n) : is_basis ℝ (e : Q n → V n) :=
 begin
   induction n with n ih,
   { split,
     { apply linear_map.ker_eq_bot'.mpr,
-      intros v hv, sorry },
+      intros v hv,
+      dsimp [finsupp.total, e_zero_apply, finsupp.lsum, linear_map.smul_right] at hv,
+      },
     { refine (ideal.eq_top_iff_one _).mpr (submodule.subset_span _),
       rw set.mem_range, exact ⟨(λ _, tt), rfl⟩ } },
   convert (is_basis_inl_union_inr ih ih).comp (Q.equiv_sum n) (Q.equiv_sum n).bijective,
   funext x,
-  dsimp [function.comp],
+  dsimp only [function.comp, Q.equiv_sum, e_apply],
+  cases h : x 0;
+  { simp only [bool.cond_tt, bool.cond_ff, prod.mk.inj_iff, sum.elim_inl, sum.elim_inr, cond],
+    exact ⟨rfl, rfl⟩ }
 end
 
 /-- The linear operator f_n corresponding to Huang's matrix A_n. -/
@@ -157,6 +160,6 @@ axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : ¬ p.adjacent q) : ε q (f
 
 
 
-theorem sensitivity (H : finset (Q n)) (x) (h : x ∈ H) :
-  real.sqrt n ≤ (H.filter (neighbours x)).card :=
+theorem sensitivity {n} (H : finset (Q n)) (x) (h : x ∈ H) :
+  real.sqrt n ≤ (H.filter (x.neighbours)).card :=
 sorry
