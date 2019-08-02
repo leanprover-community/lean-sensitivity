@@ -70,4 +70,4 @@ def ε {n : ℕ} : Q n → (V n →ₗ[ℝ] ℝ) :=
 is_basis_e.dual_basis
 
 axiom f_matrix_adjacent {n : ℕ} (p q : Q n) (h : adjacent p q) : abs (ε q (f n (e p))) = 1
-axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : adjacent p q) : ε q (f n (e p)) = 0
+axiom f_matrix_nonadjacent {n : ℕ} (p q : Q n) (h : ¬ adjacent p q) : ε q (f n (e p)) = 0
