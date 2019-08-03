@@ -122,7 +122,7 @@ begin
   sorry
 end
 
-lemma fdim_V {n} : findim ℝ (V n) = 2^n :=
+lemma findim_V {n} : findim ℝ (V n) = 2^n :=
 begin
   have := findim_eq_dim ℝ (V n),
   rw dim_V at this,
@@ -323,35 +323,50 @@ linear_independent.injective (by norm_num) (e.is_basis n).1
 lemma range_restrict {α : Type*} {β : Type*} (f : α → β) (p : α → Prop) : set.range (restrict f p) = f '' (p : set α) :=
 by { ext x,  simp [restrict], refl }
 
-
 variables {m : ℕ} (H : set (Q (m + 1))) (hH : fintype.card H ≥ 2^m + 1)
 include hH
 
 local notation `d` := vector_space.dim ℝ
+local notation `fd` := findim ℝ
+
+attribute [elim_cast] cardinal.nat_cast_inj
+attribute [elim_cast] cardinal.nat_cast_lt
+attribute [elim_cast] cardinal.nat_cast_le
 
 lemma exists_eigenvalue :
   ∃ y ∈ submodule.span ℝ (e '' H) ⊓ (g m).range, y ≠ (0 : _) :=
 begin
-  simp only [exists_prop],
-  apply exists_mem_ne_zero_of_dim_pos,
   let W := submodule.span ℝ (e '' H),
   let img := (g m).range,
-  change d ↥(W ⊓ img) > 0,
-  have : d ↥(W ⊔ img) + d ↥(W ⊓ img) = d ↥W + d ↥img, 
-    from dim_sup_add_dim_inf_eq W img,
-  rw ← dim_eq_injective (g m) g_injective at this,
-  
-  let eH := restrict e H,
-  have li : linear_independent ℝ eH, 
-  { 
-    sorry },
-  have hdW := dim_span li,
-  rw [cardinal.mk_range_eq eH (subtype.restrict_injective _ injective_e),
-      cardinal.fintype_card, range_restrict] at hdW,
-  change d ↥W = ↑(fintype.card ↥H) at hdW,
-  --have hdW: d ↥W = _ := dim_span_set _,
-
-  sorry                           -- Dimension argument
+  suffices : 0 < fd ↥(W ⊓ img),
+  { simp only [exists_prop],
+    apply exists_mem_ne_zero_of_dim_pos,
+    rw ← findim_eq_dim ℝ,
+    exact_mod_cast this },
+  have dim_le : fd ↥(W ⊔ img) ≤ 2 ^ (m + 1),
+  { have := dim_submodule_le (W ⊔ img),
+    repeat { rw ← findim_eq_dim ℝ at this },
+    norm_cast at this,
+    rwa findim_V at this},
+  have dim_add : fd ↥(W ⊔ img) + fd ↥(W ⊓ img) = fd ↥W + 2^m,
+  { have : d ↥(W ⊔ img) + d ↥(W ⊓ img) = d ↥W + d ↥img, 
+      from dim_sup_add_dim_inf_eq W img,
+    rw ← dim_eq_injective (g m) g_injective at this,
+    repeat { rw ← findim_eq_dim ℝ at this },
+    norm_cast at this,
+    rwa findim_V at this },
+  have dimW : fd ↥W = fintype.card ↥H,
+  { let eH := restrict e H,
+    have li : linear_independent ℝ eH, 
+    { 
+      sorry },
+    have hdW := dim_span li,
+    rw [cardinal.mk_range_eq eH (subtype.restrict_injective _ injective_e),
+        cardinal.fintype_card, range_restrict, ← findim_eq_dim ℝ] at hdW,
+    exact_mod_cast hdW },
+  replace hH : fd ↥W ≥ 2 ^ m + 1 := dimW.symm ▸ hH, clear dimW,
+  rw [nat.pow_succ] at dim_le,
+  linarith
 end
 
 theorem degree_theorem :
