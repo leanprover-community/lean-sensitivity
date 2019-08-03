@@ -78,6 +78,9 @@ def equiv_sum : Q (n+1) ≃ Q n ⊕ Q n :=
       exact nat.succ_ne_zero _ }
   end }
 
+lemma equiv_sum_apply (x : Q (n+1)) :
+  equiv_sum n x = cond (x 0) (sum.inl (x ∘ fin.succ)) (sum.inr (x ∘ fin.succ)) := rfl
+
 end Q
 
 /-- The free vector space on vertices of a hypercube, defined inductively. -/
@@ -132,11 +135,11 @@ begin
       rw set.mem_range, exact ⟨(λ _, tt), rfl⟩ } },
   convert (is_basis_inl_union_inr ih ih).comp (Q.equiv_sum n) (Q.equiv_sum n).bijective,
   funext x,
-  sorry
-  -- dsimp only [function.comp, Q.equiv_sum, e_apply],
-  -- cases h : x 0;
-  -- { simp only [bool.cond_tt, bool.cond_ff, prod.mk.inj_iff, sum.elim_inl, sum.elim_inr, cond],
-  --   exact ⟨rfl, rfl⟩ }
+  rw [e_succ_apply, function.comp_apply, Q.equiv_sum_apply],
+  cases h : x 0;
+  { simp only [bool.cond_tt, bool.cond_ff, prod.mk.inj_iff, sum.elim_inl, sum.elim_inr, cond,
+      linear_map.inl_apply, linear_map.inr_apply, function.comp_apply, and_true],
+    exact ⟨rfl, rfl⟩ }
 end
 
 /-- The linear operator f_n corresponding to Huang's matrix A_n. -/
@@ -191,16 +194,12 @@ begin
     convert congr_fun h (fin.pred x hx) }
 end
 
--- Where is this in the lib??
-lemma bool_cases (b : bool) : b = tt ∨ b = ff :=
-by cases b ; finish
-
 lemma duality {n : ℕ} (p q : Q n) : ε p (e q) = if p = q then 1 else 0 :=
 begin
   induction n with n IH,
   { dsimp [ε, e],
     simp [Q0_unique p, Q0_unique q] },
-  { cases bool_cases (p 0) with hp hp ; cases bool_cases (q 0) with hq hq,
+  { cases hp : p 0 ; cases hq : q 0,
     all_goals { 
       dsimp [ε, e],
       rw [hp, hq],
@@ -240,37 +239,24 @@ begin
   { intros p q,
     dsimp [f, adjacent],
     simp [Q0_unique p, Q0_unique q] },
-   { intros p q,
+  { intros p q,
     have ite_nonneg : ite (q ∘ fin.succ = p ∘ fin.succ) (1 : ℝ) 0 ≥ 0,
     { by_cases h : q ∘ fin.succ = p ∘ fin.succ; simp [h] ; norm_num },
-    cases bool_cases (p 0) with hp hp ; cases bool_cases (q 0) with hq hq,
+    cases hp : p 0 ; cases hq : q 0,
     all_goals { 
       dsimp [e, ε, f, adjacent],
       rw [hp, hq],
       repeat { rw cond_tt },
       repeat { rw cond_ff },
       simp only [add_zero, linear_map.id_apply, linear_map.fst_apply, linear_map.snd_apply,
-                 cond, cond_tt, cond_ff, linear_map.neg_apply,
-                 linear_map.copair_apply, linear_map.comp_apply],
+                cond, cond_tt, cond_ff, linear_map.neg_apply,
+                linear_map.copair_apply, linear_map.comp_apply],
       try { erw (f n).map_zero },
-      try { simp only [linear_map.map_zero, add_comm, zero_add, linear_map.map_add, neg_zero, add_zero] } },
-    { rw IH,
-      congr' 1, apply propext,
-      simp [hp, hq] },
-    { rw [duality, abs_of_nonneg ite_nonneg], 
-      simp only [true_and, false_or, not_false_iff, false_and],
-      congr' 1,
-      apply propext, 
-      rw eq_comm, },
-    { rw [duality, abs_of_nonneg ite_nonneg], 
-      simp only [true_and, false_or, not_false_iff, false_and],
-      congr' 1,
-      apply propext, 
-      rw eq_comm, },
-    { simp only [linear_map.map_neg, abs_neg],
-      rw IH,
-      simp, 
-      congr' 1 } }
+      try { simp only [abs_neg, abs_of_nonneg ite_nonneg, add_comm, add_zero, duality,
+              false_and, false_or, IH, linear_map.map_add, linear_map.map_neg, linear_map.map_zero,
+              neg_zero, not_false_iff, not_true, or_false, true_and, zero_add] },
+      try { congr' 1, apply propext, rw eq_comm },
+      try { simp } } }
 end
 
 /-- The linear operator g_n corresponding to Knuth's matrix B_n.
