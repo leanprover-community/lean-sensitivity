@@ -315,7 +315,7 @@ by simp
 lemma fintype.card_eq_sum_ones {α} [fintype α] : fintype.card α = (fintype.elems α).sum (λ _, 1) :=
 finset.card_eq_sum_ones _
 
-lemma refold_coe {n} {f : V n →ₗ[ℝ] V n} : f.to_fun = ⇑f := rfl
+lemma refold_coe {α β γ} [ring α] [add_comm_group γ] [add_comm_group β] [module α β] [module α γ] {f : β →ₗ[α] γ} : f.to_fun = ⇑f := rfl
 
 lemma injective_e {n} : injective (@e n) := 
 linear_independent.injective (by norm_num) (e.is_basis n).1
@@ -368,14 +368,13 @@ begin
   suffices : real.sqrt (↑m + 1) * abs (l q) ≤ ↑(fintype.card {p // p ∈ H ∧ Q.adjacent q p}) * abs (l q),
     by { exact (mul_le_mul_right H_q_pos).mp ‹_› },
   rw [<-abs_sqrt_nat, <-abs_mul],
-  transitivity abs ((ε q) ((f (m + 1)).to_fun ((finsupp.total (Q (m + 1)) (V (m + 1)) ℝ e).to_fun l))),
-  from calc abs (real.sqrt (↑m + 1) * l q) ≤ abs (ε q (real.sqrt (↑m + 1) • y)) : sorry
-         ...  ≤ abs (ε q $ ((f (m + 1)).to_fun $ (finsupp.total (Q (m + 1)) (V (m + 1)) ℝ e).to_fun l)) :
-                  by { rw[<-f_image_g, <-H_l₂], refl, simp at H_mem'',
-                       cases H_mem'' with v Hv, exact ⟨v, Hv.symm⟩ },
-
-  rw[finsupp.total, finsupp.lsum], dsimp, rw[finsupp.sum], -- unfolding finsupp.total
+  transitivity abs (ε q (real.sqrt (↑m + 1) • y)),
+    by sorry,
+  rw[<-f_image_g, <-H_l₂],
+    swap, {simp at H_mem'', rcases H_mem'' with ⟨v,Hv⟩, exact ⟨v, Hv.symm⟩},
+  rw[finsupp.total, finsupp.lsum], unfold_coes, dsimp, rw[finsupp.sum], -- unfolding finsupp.total
   simp only [refold_coe], rw[linear_map.map_sum],
-  sorry -- need to move sum past the abs (ε q) with triangle inequality (this is third line in paper calculation)
-        -- then use f_matrix, then H_max, then fintype.card_eq_sum_ones
+  -- need to move sum past the abs (ε q) with triangle inequality (this is third line in paper calculation)
+  -- then use f_matrix, then H_max, then fintype.card_eq_sum_ones
+  sorry
 end
