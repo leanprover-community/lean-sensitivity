@@ -2,6 +2,7 @@ import tactic
 import tactic.fin_cases
 import data.real.basic
 import linear_algebra.dual
+import linear_algebra.finsupp
 import ring_theory.ideals
 
 local attribute [instance, priority 1] classical.prop_decidable
@@ -281,6 +282,17 @@ begin
   abel,
 end
 
+lemma abs_sqrt_nat {m : ℕ} : abs (real.sqrt (↑m + 1) : ℝ) = real.sqrt (↑m + 1) :=
+  abs_of_pos $ real.sqrt_pos.mpr $ nat.cast_add_one_pos m
+
+lemma finset.card_eq_sum_ones {α} (s : finset α) : s.card = (s.sum $ λ _, 1) :=
+by simp
+
+lemma fintype.card_eq_sum_ones {α} [fintype α] : fintype.card α = (fintype.elems α).sum (λ _, 1) :=
+finset.card_eq_sum_ones _
+
+lemma refold_coe {n} {f : V n →ₗ[ℝ] V n} : f.to_fun = ⇑f := rfl
+
 variables {m : ℕ} (H : set (Q (m + 1))) (hH : fintype.card H ≥ 2^m + 1)
 include hH
 
@@ -290,4 +302,26 @@ sorry                           -- Dimension argument
 
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ fintype.card {p // p ∈ H ∧ q.adjacent p} :=
-sorry
+begin
+  rcases exists_eigenvalue H ‹_› with ⟨y, ⟨H_mem, H_nonzero⟩⟩,
+  cases H_mem with H_mem' H_mem'',
+  rcases (finsupp.mem_span_iff_total _).mp H_mem' with ⟨l, H_l₁, H_l₂⟩,
+  have H_q_max : ∃ q, q ∈ H ∧ ∀ q', q' ∈ H → abs (l q') ≤ abs (l q),
+    by {sorry}, -- get q by finset.sup?
+  rcases H_q_max with ⟨q, H_mem_H, H_max⟩,
+  have H_q_pos : 0 < abs (l q) := sorry,
+  refine ⟨q, ⟨‹_›, _⟩⟩,
+  suffices : real.sqrt (↑m + 1) * abs (l q) ≤ ↑(fintype.card {p // p ∈ H ∧ Q.adjacent q p}) * abs (l q),
+    by { exact (mul_le_mul_right H_q_pos).mp ‹_› },
+  rw [<-abs_sqrt_nat, <-abs_mul],
+  transitivity abs ((ε q) ((f (m + 1)).to_fun ((finsupp.total (Q (m + 1)) (V (m + 1)) ℝ e).to_fun l))),
+  from calc abs (real.sqrt (↑m + 1) * l q) ≤ abs (ε q (real.sqrt (↑m + 1) • y)) : sorry
+         ...  ≤ abs (ε q $ ((f (m + 1)).to_fun $ (finsupp.total (Q (m + 1)) (V (m + 1)) ℝ e).to_fun l)) :
+                  by { rw[<-f_image_g, <-H_l₂], refl, simp at H_mem'',
+                       cases H_mem'' with v Hv, exact ⟨v, Hv.symm⟩ },
+
+  rw[finsupp.total, finsupp.lsum], dsimp, rw[finsupp.sum], -- unfolding finsupp.total
+  simp only [refold_coe], rw[linear_map.map_sum],
+  sorry -- need to move sum past the abs (ε q) with triangle inequality (this is third line in paper calculation)
+        -- then use f_matrix, then H_max, then fintype.card_eq_sum_ones
+end
