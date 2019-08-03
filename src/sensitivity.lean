@@ -3,12 +3,15 @@ import tactic.fin_cases
 import data.real.basic
 import linear_algebra.dual
 import linear_algebra.finsupp
+import linear_algebra.finite_dimensional
 import ring_theory.ideals
 
 local attribute [instance, priority 1] classical.prop_decidable
 noncomputable theory
 local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
+
+open function
 
 /-- The hypercube.-/
 def Q (n) : Type := fin n → bool
@@ -109,6 +112,24 @@ begin
   { apply dim_of_field },
   { dunfold V,
     rw [dim_prod, IH, pow_succ, two_mul] }
+end
+
+open finite_dimensional
+
+instance {n}: finite_dimensional ℝ (V n) :=
+begin
+  rw [finite_dimensional_iff_dim_lt_omega, dim_V],
+  sorry
+end
+
+lemma fdim_V {n} : findim ℝ (V n) = 2^n :=
+begin
+  have := findim_eq_dim ℝ (V n),
+  rw dim_V at this,
+  rw [← cardinal.nat_cast_inj, this],
+  simp,
+  
+  sorry
 end
 
 /-- The basis of V indexed by the hypercube.-/
@@ -296,12 +317,42 @@ finset.card_eq_sum_ones _
 
 lemma refold_coe {n} {f : V n →ₗ[ℝ] V n} : f.to_fun = ⇑f := rfl
 
+lemma injective_e {n} : injective (@e n) := 
+linear_independent.injective (by norm_num) (e.is_basis n).1
+
+lemma range_restrict {α : Type*} {β : Type*} (f : α → β) (p : α → Prop) : set.range (restrict f p) = f '' (p : set α) :=
+by { ext x,  simp [restrict], refl }
+
+
 variables {m : ℕ} (H : set (Q (m + 1))) (hH : fintype.card H ≥ 2^m + 1)
 include hH
 
+local notation `d` := vector_space.dim ℝ
+
 lemma exists_eigenvalue :
   ∃ y ∈ submodule.span ℝ (e '' H) ⊓ (g m).range, y ≠ (0 : _) :=
-sorry                           -- Dimension argument
+begin
+  simp only [exists_prop],
+  apply exists_mem_ne_zero_of_dim_pos,
+  let W := submodule.span ℝ (e '' H),
+  let img := (g m).range,
+  change d ↥(W ⊓ img) > 0,
+  have : d ↥(W ⊔ img) + d ↥(W ⊓ img) = d ↥W + d ↥img, 
+    from dim_sup_add_dim_inf_eq W img,
+  rw ← dim_eq_injective (g m) g_injective at this,
+  
+  let eH := restrict e H,
+  have li : linear_independent ℝ eH, 
+  { 
+    sorry },
+  have hdW := dim_span li,
+  rw [cardinal.mk_range_eq eH (subtype.restrict_injective _ injective_e),
+      cardinal.fintype_card, range_restrict] at hdW,
+  change d ↥W = ↑(fintype.card ↥H) at hdW,
+  --have hdW: d ↥W = _ := dim_span_set _,
+
+  sorry                           -- Dimension argument
+end
 
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ fintype.card {p // p ∈ H ∧ q.adjacent p} :=
