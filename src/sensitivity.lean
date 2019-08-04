@@ -11,6 +11,10 @@ noncomputable theory
 local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
+@[simp] lemma abs_nonpos_iff {α : Type*} [decidable_linear_ordered_comm_group α] {a : α} :
+  abs a ≤ 0 ↔ a = 0 :=
+by rw [← not_lt, abs_pos_iff, not_not]
+
 open function
 
 /-- The hypercube.-/
@@ -384,6 +388,7 @@ begin
   linarith
 end
 
+
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ fintype.card {p // p ∈ H ∧ q.adjacent p} :=
 begin
@@ -393,7 +398,19 @@ begin
   have H_q_max : ∃ q, q ∈ H ∧ ∀ q', q' ∈ H → abs (l q') ≤ abs (l q),
     by {sorry}, -- get q by finset.sup?
   rcases H_q_max with ⟨q, H_mem_H, H_max⟩,
-  have H_q_pos : 0 < abs (l q) := sorry,
+  have H_q_pos : 0 < abs (l q),
+  { rw [abs_pos_iff],
+    assume h,
+    rw [finsupp.mem_supported'] at H_l₁,
+    have H_max' : ∀ q', l q' = 0,
+    { intro q',
+      by_cases hq' : q' ∈ H,
+      { revert q', simpa [h] using H_max },
+      { exact H_l₁ _ hq' } },
+    have hl0 : l = 0,
+    { ext, rw [H_max', finsupp.zero_apply] },
+    simp [hl0] at H_l₂,
+    exact H_nonzero H_l₂.symm },
   refine ⟨q, ⟨‹_›, _⟩⟩,
   suffices : real.sqrt (↑m + 1) * abs (l q) ≤ ↑(fintype.card {p // p ∈ H ∧ Q.adjacent q p}) * abs (l q),
     by { exact (mul_le_mul_right H_q_pos).mp ‹_› },
