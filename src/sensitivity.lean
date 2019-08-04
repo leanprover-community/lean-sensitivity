@@ -238,12 +238,12 @@ begin
   { dsimp [ε, e],
     simp [Q0_unique p, Q0_unique q] },
   { cases hp : p 0 ; cases hq : q 0,
-    all_goals { 
+    all_goals {
       dsimp [ε, e],
       rw [hp, hq],
       repeat {rw cond_tt},
       repeat {rw cond_ff},
-      simp only [linear_map.fst_apply, linear_map.snd_apply, linear_map.comp_apply] }, 
+      simp only [linear_map.fst_apply, linear_map.snd_apply, linear_map.comp_apply] },
     { rw IH,
       congr'  1,
       rw Q_succ_n_eq,
@@ -281,7 +281,7 @@ begin
     have ite_nonneg : ite (q ∘ fin.succ = p ∘ fin.succ) (1 : ℝ) 0 ≥ 0,
     { by_cases h : q ∘ fin.succ = p ∘ fin.succ; simp [h] ; norm_num },
     cases hp : p 0 ; cases hq : q 0,
-    all_goals { 
+    all_goals {
       dsimp [e, ε, f, adjacent],
       rw [hp, hq],
       repeat { rw cond_tt },
@@ -315,7 +315,7 @@ begin
   dsimp [g],
   erw f,
   simp [f_squared],
-  rw [smul_add, smul_smul, real.mul_self_sqrt (by exact_mod_cast zero_le _ : 0 ≤ (1 : ℝ) + m), add_smul, one_smul], 
+  rw [smul_add, smul_smul, real.mul_self_sqrt (by exact_mod_cast zero_le _ : 0 ≤ (1 : ℝ) + m), add_smul, one_smul],
   abel,
 end
 
@@ -330,7 +330,7 @@ finset.card_eq_sum_ones _
 
 lemma refold_coe {α β γ} [ring α] [add_comm_group γ] [add_comm_group β] [module α β] [module α γ] {f : β →ₗ[α] γ} : f.to_fun = ⇑f := rfl
 
-lemma injective_e {n} : injective (@e n) := 
+lemma injective_e {n} : injective (@e n) :=
 linear_independent.injective (by norm_num) (e.is_basis n).1
 
 lemma range_restrict {α : Type*} {β : Type*} (f : α → β) (p : α → Prop) : set.range (restrict f p) = f '' (p : set α) :=
@@ -362,7 +362,7 @@ begin
     norm_cast at this,
     rwa findim_V at this},
   have dim_add : fd ↥(W ⊔ img) + fd ↥(W ⊓ img) = fd ↥W + 2^m,
-  { have : d ↥(W ⊔ img) + d ↥(W ⊓ img) = d ↥W + d ↥img, 
+  { have : d ↥(W ⊔ img) + d ↥(W ⊓ img) = d ↥W + d ↥img,
       from dim_sup_add_dim_inf_eq W img,
     rw ← dim_eq_injective (g m) g_injective at this,
     repeat { rw ← findim_eq_dim ℝ at this },
@@ -370,9 +370,11 @@ begin
     rwa findim_V at this },
   have dimW : fd ↥W = fintype.card ↥H,
   { let eH := restrict e H,
-    have li : linear_independent ℝ eH, 
-    { 
-      sorry },
+    have li : linear_independent ℝ eH,
+    { refine linear_independent_comp_subtype.2 (λ l hl, _),
+      clear hl, revert l,
+      rw [← linear_map.ker_eq_bot'],
+      exact (e.is_basis (m+1)).1 },
     have hdW := dim_span li,
     rw [cardinal.mk_range_eq eH (subtype.restrict_injective _ injective_e),
         cardinal.fintype_card, range_restrict, ← findim_eq_dim ℝ] at hdW,
