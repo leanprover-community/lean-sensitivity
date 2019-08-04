@@ -5,9 +5,10 @@ import linear_algebra.dual
 import linear_algebra.finsupp
 import linear_algebra.finite_dimensional
 import ring_theory.ideals
+import analysis.normed_space.basic
 
-local attribute [instance, priority 1] classical.prop_decidable
 noncomputable theory
+
 local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
@@ -96,14 +97,14 @@ def V : ℕ → Type
 | 0 := ℝ
 | (n+1) := V n × V n
 
-instance : Π n, add_comm_group (V n) :=
+noncomputable instance : Π n, add_comm_group (V n) :=
 begin
   apply nat.rec,
   { dunfold V, apply_instance },
   { introsI n IH, dunfold V, apply_instance }
 end
 
-instance : Π n, vector_space ℝ (V n) :=
+noncomputable instance : Π n, vector_space ℝ (V n) :=
 begin
   apply nat.rec,
   { dunfold V, apply_instance },
@@ -150,7 +151,7 @@ begin
 end
 
 /-- The basis of V indexed by the hypercube.-/
-def e : Π {n}, Q n → V n
+noncomputable def e : Π {n}, Q n → V n
 | 0     := λ _, (1:ℝ)
 | (n+1) := λ x, cond (x 0) (e (x ∘ fin.succ), 0) (0, e (x ∘ fin.succ))
 
@@ -158,7 +159,8 @@ def e : Π {n}, Q n → V n
   e x = (1 : ℝ) := rfl
 
 lemma e_succ_apply {n} (x : Q (n+1)) :
-  e x = cond (x 0) (e (x ∘ fin.succ), 0) (0, e (x ∘ fin.succ)) := rfl
+  e x = cond (x 0) (e (x ∘ fin.succ), 0) (0, e (x ∘ fin.succ)) :=
+by rw e
 
 lemma e.is_basis (n) : is_basis ℝ (e : Q n → V n) :=
 begin
@@ -303,7 +305,7 @@ end
 
 /-- The linear operator g_n corresponding to Knuth's matrix B_n.
   We adopt the convention n = m+1. -/
-def g (m : ℕ) : V m →ₗ[ℝ] V (m+1) :=
+noncomputable def g (m : ℕ) : V m →ₗ[ℝ] V (m+1) :=
 linear_map.pair (f m + real.sqrt (m+1) • linear_map.id) linear_map.id
 
 lemma g_injective {m : ℕ} : function.injective (g m) :=
@@ -333,6 +335,9 @@ lemma fintype.card_eq_sum_ones {α} [fintype α] : fintype.card α = (fintype.el
 finset.card_eq_sum_ones _
 
 lemma refold_coe {α β γ} [ring α] [add_comm_group γ] [add_comm_group β] [module α β] [module α γ] {f : β →ₗ[α] γ} : f.to_fun = ⇑f := rfl
+
+lemma abs_triangle_sum {α : Type*} {s : finset α} {f : α → ℝ} : abs (s.sum f) ≤ (s.sum (λ x, abs (f x))) :=
+(norm_triangle_sum _ _ : ∥ _ ∥ ≤ finset.sum s (λ x, ∥ f x∥))
 
 lemma injective_e {n} : injective (@e n) :=
 linear_independent.injective (by norm_num) (e.is_basis n).1
@@ -388,7 +393,6 @@ begin
   linarith
 end
 
-
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ fintype.card {p // p ∈ H ∧ q.adjacent p} :=
 begin
@@ -420,8 +424,8 @@ begin
   rw[<-f_image_g, <-H_l₂],
     swap, {simp at H_mem'', rcases H_mem'' with ⟨v,Hv⟩, exact ⟨v, Hv.symm⟩},
   rw[finsupp.total, finsupp.lsum], unfold_coes, dsimp, rw[finsupp.sum], -- unfolding finsupp.total
-  simp only [refold_coe], rw[linear_map.map_sum],
-  -- need to move sum past the abs (ε q) with triangle inequality (this is third line in paper calculation)
-  -- then use f_matrix, then H_max, then fintype.card_eq_sum_ones
+  simp only [refold_coe], rw[linear_map.map_sum, linear_map.map_sum],
+  refine le_trans abs_triangle_sum _,
+  -- now use f_matrix, then H_max, then fintype.card_eq_sum_ones
   sorry
 end
