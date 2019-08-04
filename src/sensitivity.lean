@@ -116,10 +116,25 @@ end
 
 open finite_dimensional
 
+section cardinal_lemma
+universe u
+
+lemma cardinal.monoid_pow_eq_cardinal_pow {κ : cardinal.{u}} {n : ℕ} : κ ^ n = (κ ^ (↑n : cardinal.{u})) :=
+begin
+  induction n with n ih,
+    {simp},
+    { rw[nat.cast_succ, cardinal.power_add, <-ih, cardinal.power_one, mul_comm], refl }
+end
+
+end cardinal_lemma
+
 instance {n}: finite_dimensional ℝ (V n) :=
 begin
   rw [finite_dimensional_iff_dim_lt_omega, dim_V],
-  sorry
+  suffices : ∃ k : ℕ, (↑2) ^ (↑k : cardinal.{0}) = (2 ^ n : cardinal.{0}),
+    by {cases this with k H_k, rw[<-H_k, <-cardinal.nat_cast_pow],
+        exact cardinal.nat_lt_omega _},
+  from ⟨n, by {convert (@cardinal.monoid_pow_eq_cardinal_pow 2 n).symm, simp}⟩
 end
 
 lemma findim_V {n} : findim ℝ (V n) = 2^n :=
@@ -127,9 +142,7 @@ begin
   have := findim_eq_dim ℝ (V n),
   rw dim_V at this,
   rw [← cardinal.nat_cast_inj, this],
-  simp,
-  
-  sorry
+  simp[cardinal.monoid_pow_eq_cardinal_pow]
 end
 
 /-- The basis of V indexed by the hypercube.-/
