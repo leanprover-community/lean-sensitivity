@@ -102,10 +102,10 @@ begin
       { apply_instance } } }
 end
 
-@[symm] lemma adjacent_symm {p q : Q n} : p.adjacent q ↔ q.adjacent p :=
+@[symm] lemma adjacent_comm {p q : Q n} : p.adjacent q ↔ q.adjacent p :=
 by simp only [adjacent_iff_dist, dist_symm]
 
-lemma adjacent.symm {p q : Q n} : p.adjacent q → q.adjacent p := adjacent_symm.1
+lemma adjacent.symm {p q : Q n} : p.adjacent q → q.adjacent p := adjacent_comm.1
 
 variable (n)
 
@@ -493,7 +493,7 @@ begin
     { intros x H_mem H_not_mem,
         by_cases x ∈ H,
           { simp at H_mem H_not_mem, rw[f_matrix], have := (H_not_mem ‹_› ‹_›),
-            change ¬ Q.adjacent _ _ at this, simp [Q.adjacent_symm, this] },
+            change ¬ Q.adjacent _ _ at this, simp [Q.adjacent_comm, this] },
           { suffices : (l x) = 0,
               by {simp [this]},
             rw [finsupp.mem_supported'] at H_l₁,
