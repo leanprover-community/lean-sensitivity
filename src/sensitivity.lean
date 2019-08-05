@@ -8,6 +8,9 @@ noncomputable theory
 local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
+lemma ne.symm_iff {α} {a b : α} : a ≠ b ↔ b ≠ a := ⟨ne.symm, ne.symm⟩
+lemma eq.symm_iff {α} {a b : α} : a = b ↔ b = a := ⟨eq.symm, eq.symm⟩
+
 open function
 
 /-- The hypercube.-/
@@ -40,44 +43,59 @@ finset.sum_eq_zero $ λ i hi, by simp only [xor, bxor_self, bool.cond_ff]
 congr_arg ((finset.univ : finset (fin n)).sum) $
 by { funext i, simp [xor_comm] }
 
-/-- The adjacency relation on Q^n: two vertices of the hypercube are adjacent if their distance is 1.-/
-def adjacent : Π {n : ℕ}, Q n → (set $ Q n)
-| 0 p q := false
-| (n+1) p q := (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨ (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ)
+def adjacent {n : ℕ} (p : Q n) : set (Q n) := λ q, ∃! i, p i ≠ q i
 
-@[simp] lemma not_adjacent_zero (p q : Q 0) : p.adjacent q = false := rfl
+@[simp] lemma not_adjacent_zero (p q : Q 0) : ¬ p.adjacent q :=
+by rintros ⟨v, _⟩; apply fin_zero_elim v
+
+lemma fin_one_eq_zero (x : fin 1) : x = 0 := subsingleton.elim x 0
 
 lemma adjacent_succ_iff {p q : Q (n+1)} :
-  p.adjacent q ↔ (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨ (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ) :=
-by rw [adjacent]
-
-lemma adjacent_iff_dist {x y : Q n} : x.adjacent y ↔ x.dist y = 1 :=
+  p.adjacent q ↔ (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨
+                 (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ) :=
 begin
-  induction n with n ih,
-  { rw [adjacent, false_iff],
-    convert zero_ne_one, apply_instance },
-  { have : (0 : fin (n+1)) ∈ (finset.univ : finset (fin (n+1))) := finset.mem_univ _,
-    rw [adjacent_succ_iff, dist, ← finset.insert_erase this, finset.sum_insert (finset.not_mem_erase _ _)],
-    by_cases h : x 0 = y 0,
-    { simp [h, xor, ih], apply iff.eq_cancel_right,
-      apply finset.sum_bij (λ (p : fin n) hp, p.succ),
-      { intros p hp, rw finset.mem_erase, exact ⟨fin.succ_ne_zero _, finset.mem_univ _⟩ },
-      { intros p hp, refl },
-      { intros p q hp hq hpq, apply fin.succ.inj hpq, },
-      { intros p hp, rw finset.mem_erase at hp, exact ⟨p.pred hp.1, finset.mem_univ _, (fin.succ_pred _ hp.1).symm⟩ } },
-    { simp only [h, xor, bxor_of_ne h, false_or, bxor, bool.cond_tt, ne.def, cond, false_and, true_and, bxor, not_false_iff],
-      rw [funext_iff, add_comm 1, nat.succ_inj', finset.sum_eq_zero_iff_of_nonneg (λ p hp, nat.zero_le _)],
-      { split; intros H p,
-        { intros hp, rw finset.mem_erase at hp, dsimp only [function.comp] at H,
-          rw [← fin.succ_pred _ hp.1, H (p.pred hp.1)], simp only [bxor_self, bool.cond_ff] },
-        { specialize H p.succ, rw finset.mem_erase at H, specialize H ⟨fin.succ_ne_zero _, finset.mem_univ _⟩,
-          simp only [function.comp_app], revert H,
-          generalize ha : (x p.succ) = a, generalize hb : y p.succ = b, cases a; cases b; simp } },
-      { apply_instance } } }
+  cases n with n,
+  { split,
+    { rintro ⟨i, h_adj_i, _⟩,
+      right, split,
+      { convert h_adj_i },
+      { ext x, apply fin_zero_elim x } },
+    { rintro (⟨h_eq, h_adj⟩|⟨h_ne, h_comp⟩),
+      { cases h_adj with x _, apply fin_zero_elim x },
+      { refine ⟨0, h_ne, _⟩,
+        intros _ _, apply fin_one_eq_zero } } },
+  { split,
+    { rintro ⟨i, h_ne, h_comp⟩,
+      by_cases h_zero : i = 0,
+      { right, split,
+        { rwa h_zero at h_ne },
+        { ext x,
+          have h_xsucc : x.succ ≠ i, { rw h_zero, apply fin.succ_ne_zero },
+          contrapose! h_xsucc,
+          exact h_comp _ h_xsucc } },
+      { left, split,
+        { contrapose! h_zero, rw h_comp _ h_zero },
+        { dsimp at h_comp,
+          use i.pred h_zero, simp [h_zero, h_ne],
+          intros r hr,
+          simp [eq.symm (h_comp _ hr)] } } },
+    { rintro (⟨h_eq, h_adj⟩|⟨h_ne, h_comp⟩),
+      { rcases h_adj with ⟨i, hi1, hi2⟩,
+        use [i.succ, hi1],
+        intros r hr,
+        have hr' : r ≠ 0 := λ hz, by rw hz at hr; contradiction,
+        rw ←fin.succ_pred r hr' at hr,
+        rw [←hi2 _ hr, fin.succ_pred] },
+      { use [0, h_ne],
+        intros r hr,
+        contrapose! hr,
+        rw ←fin.succ_pred r hr,
+        apply congr_fun h_comp } } }
 end
 
+
 @[symm] lemma adjacent_comm {p q : Q n} : p.adjacent q ↔ q.adjacent p :=
-by simp only [adjacent_iff_dist, dist_symm]
+by simp only [adjacent, ne.symm_iff]
 
 lemma adjacent.symm {p q : Q n} : p.adjacent q → q.adjacent p := adjacent_comm.1
 
@@ -240,8 +258,8 @@ begin
     all_goals {
       repeat {rw cond_tt},
       repeat {rw cond_ff},
-      simp only [cond_tt, cond_ff, linear_map.fst_apply, linear_map.snd_apply, linear_map.comp_apply, IH],
-      try { congr'  1, rw Q_succ_n_eq, finish },
+      simp only [linear_map.fst_apply, linear_map.snd_apply, linear_map.comp_apply, IH],
+      try { congr' 1, rw Q_succ_n_eq, finish },
       try {
         erw (ε _).map_zero,
         have : p ≠ q, { intro h, rw Q_succ_n_eq p q at h, finish },
