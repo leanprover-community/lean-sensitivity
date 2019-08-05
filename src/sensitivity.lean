@@ -258,25 +258,19 @@ lemma f_matrix {n} : ∀ (p q : Q n), abs (ε q (f n (e p))) = if q.adjacent p t
 begin
   induction n with n IH,
   { intros p q,
-    dsimp [f, Q.adjacent],
-    simp },
+    dsimp [f],
+    simp [Q.not_adjacent_zero] },
   { intros p q,
     have ite_nonneg : ite (q ∘ fin.succ = p ∘ fin.succ) (1 : ℝ) 0 ≥ 0,
     { split_ifs ; norm_num },
+    have f_map_zero := (show linear_map ℝ (V (n+0)) (V n), from f n).map_zero,
     cases hp : p 0 ; cases hq : q 0,
-    all_goals {
-      dsimp [e, ε, f, Q.adjacent],
-      rw [hp, hq],
-      repeat { rw cond_tt },
-      repeat { rw cond_ff },
-      simp only [add_zero, linear_map.id_apply, linear_map.fst_apply, linear_map.snd_apply,
-                cond, cond_tt, cond_ff, linear_map.neg_apply,
-                linear_map.copair_apply, linear_map.comp_apply],
-      try { erw (f n).map_zero },
-      try { simp only [abs_neg, abs_of_nonneg ite_nonneg, add_comm, add_zero, duality,
-              false_and, false_or, IH, linear_map.map_add, linear_map.map_neg, linear_map.map_zero,
-              neg_zero, not_false_iff, not_true, or_false, true_and, zero_add] },
-      try { simp },
+    all_goals 
+    { dsimp [e, ε, f], 
+      rw [hp, hq], 
+      repeat {rw cond_tt},
+      repeat {rw cond_ff},
+      simp [Q.adjacent_succ_iff, hp, hq, IH, duality, f_map_zero, abs_of_nonneg ite_nonneg],
       congr } }
 end
 
