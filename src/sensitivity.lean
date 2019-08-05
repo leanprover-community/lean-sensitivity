@@ -150,7 +150,7 @@ end
 
 open finite_dimensional
 
-instance {n}: finite_dimensional ℝ (V n) :=
+instance {n} : finite_dimensional ℝ (V n) :=
 begin
   rw [finite_dimensional_iff_dim_lt_omega, dim_V],
   convert cardinal.nat_lt_omega (2^n),
@@ -262,7 +262,7 @@ begin
     simp },
   { intros p q,
     have ite_nonneg : ite (q ∘ fin.succ = p ∘ fin.succ) (1 : ℝ) 0 ≥ 0,
-    { by_cases h : q ∘ fin.succ = p ∘ fin.succ; simp [h] ; norm_num },
+    { split_ifs ; norm_num },
     cases hp : p 0 ; cases hq : q 0,
     all_goals {
       dsimp [e, ε, f, Q.adjacent],
@@ -289,14 +289,20 @@ lemma g_apply : ∀ {m : ℕ} v, g m v = (f m v + real.sqrt (m+1) • v, v)
 | m v := by delta g; simp
 
 lemma g_injective {m : ℕ} : function.injective (g m) :=
-by { rw g, intros x₁ x₂ h, simp only [linear_map.pair_apply, linear_map.id_apply, prod.mk.inj_iff] at h, exact h.right }
+begin
+  rw g,
+  intros x₁ x₂ h,
+  simp only [linear_map.pair_apply, linear_map.id_apply, prod.mk.inj_iff] at h,
+  exact h.right
+end
 
 -- I don't understand why the type ascription is necessary here, when f_squared worked fine
 lemma f_image_g {m : ℕ} (w : V (m + 1)) (hv : ∃ v, g m v = w) :
-  (f (m + 1) : V (m + 1) → V (m + 1)) w = real.sqrt (m + 1) • w :=
+  (f (m + 1) : _) w = real.sqrt (m + 1) • w :=
 begin
   rcases hv with ⟨v, rfl⟩,
-  have : real.sqrt (m+1) * real.sqrt (m+1) = m+1 := real.mul_self_sqrt (by exact_mod_cast zero_le _),
+  have : real.sqrt (m+1) * real.sqrt (m+1) = m+1 :=
+    real.mul_self_sqrt (by exact_mod_cast zero_le _),
   simp [-add_comm, this, f_succ_apply, g_apply, f_squared, smul_add, add_smul, smul_smul],
 end
 
@@ -327,7 +333,7 @@ begin
   { have := dim_submodule_le (W ⊔ img),
     repeat { rw ← findim_eq_dim ℝ at this },
     norm_cast at this,
-    rwa findim_V at this},
+    rwa findim_V at this },
   have dim_add : fd ↥(W ⊔ img) + fd ↥(W ⊓ img) = fd ↥W + 2^m,
   { have : d ↥(W ⊔ img) + d ↥(W ⊓ img) = d ↥W + d ↥img,
       from dim_sup_add_dim_inf_eq W img,
@@ -337,11 +343,8 @@ begin
     rwa findim_V at this },
   have dimW : fd ↥W = fintype.card ↥H,
   { let eH := restrict e H,
-    have li : linear_independent ℝ eH,
-    { refine linear_independent_comp_subtype.2 (λ l hl, _),
-      clear hl, revert l,
-      rw [← linear_map.ker_eq_bot'],
-      exact (e.is_basis (m+1)).1 },
+    have li : linear_independent ℝ eH :=
+      linear_independent.comp (e.is_basis _).1 _ subtype.val_injective,
     have hdW := dim_span li,
     rw [cardinal.mk_range_eq eH (subtype.restrict_injective _ injective_e),
         cardinal.fintype_card, range_restrict, ← findim_eq_dim ℝ] at hdW,
