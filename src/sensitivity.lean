@@ -349,6 +349,8 @@ begin
   linarith
 end
 
+.
+
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ (H ∩ q.adjacent).to_finset.card :=
 begin
@@ -361,8 +363,7 @@ begin
     cases @finset.max_of_mem _ _ (H.to_finset.image (λ q', abs (l q')))
       (abs (l r)) (finset.mem_image_of_mem _ (set.mem_to_finset.2 hr)) with x hx,
     rcases finset.mem_image.1 (finset.mem_of_max hx) with ⟨q, hq, rfl⟩,
-    use q,
-    refine ⟨set.mem_to_finset.1 hq, λ q' hq', _⟩,
+    refine ⟨q, ⟨set.mem_to_finset.1 hq, λ q' hq', _⟩⟩,
     exact (finset.le_max_of_mem (finset.mem_image_of_mem _ (set.mem_to_finset.2 hq')) hx : _) },
   have H_q_pos : 0 < abs (l q),
   { rw [abs_pos_iff],
@@ -380,40 +381,58 @@ begin
   refine ⟨q, ⟨‹_›, _⟩⟩,
   suffices : real.sqrt (↑m + 1) * abs (l q) ≤ ↑(_) * abs (l q),
     by { exact (mul_le_mul_right H_q_pos).mp ‹_› },
-  rw [← abs_sqrt_nat, ← abs_mul],
-  transitivity abs (ε q (real.sqrt (↑m + 1) • y)),
-  { rw [linear_map.map_smul, smul_eq_mul, abs_mul, abs_mul],
-    apply mul_le_mul_of_nonneg_left _ _,
-    { apply le_of_eq, congr' 1, rw [← H_l₂, finsupp.total_apply, finsupp.sum, linear_map.map_sum],
-      rw [finset.sum_eq_single q],
-      { rw [linear_map.map_smul, smul_eq_mul, duality, if_pos rfl, mul_one], },
-      { intros p hp hne,
-        simp [linear_map.map_smul, duality, hne.symm] },
-      { intro h_q_ne_supp,
-        simp [finsupp.not_mem_support_iff.mp h_q_ne_supp] } },
-    { exact abs_nonneg _ } },
-  rw [← f_image_g y (by simpa using H_mem''), ← H_l₂, finsupp.total_apply, finsupp.sum,
-      linear_map.map_sum, linear_map.map_sum],
-  refine le_trans abs_triangle_sum _,
-  conv { congr, congr, skip, simp[abs_mul] },
-  rw[← finset.sum_subset], show finset _,
-    exact (l.support ∩ H.to_finset ∩ (q.adjacent).to_finset), rotate,
-    { intros x Hx, simp[-finsupp.mem_support_iff] at Hx, exact Hx.left },
-    { intros x H_mem H_not_mem,
-        by_cases x ∈ H,
-          { simp at H_mem H_not_mem, rw[f_matrix], have := (H_not_mem ‹_› ‹_›),
-            change ¬ Q.adjacent _ _ at this, simp [Q.adjacent_comm, this] },
-          { suffices : (l x) = 0,
-              by {simp [this]},
-            rw [finsupp.mem_supported'] at H_l₁,
-            exact H_l₁ _ ‹_› }},
-  refine le_trans (finset.sum_le_sum _) _, exact λ p, abs (l q),
-    { intros x Hx, rw[f_matrix], simp at Hx,
-      have := Hx.right.right, change Q.adjacent _ _ at this,
-      rw [if_pos this.symm, mul_one], exact H_max x Hx.2.1 },
-    simp only [mul_one, id.def, finset.sum_const, add_monoid.smul_one, add_monoid.smul_eq_mul],
-    refine (mul_le_mul_right ‹_›).mpr _,
-    norm_cast, refine finset.card_le_of_subset _,
-    rw ← finset.coe_subset, simp only [finset.coe_inter, finset.coe_to_finset'],
-    rw set.inter_assoc, exact set.inter_subset_right _ _
+
+  from calc
+    real.sqrt (↑m + 1) * (abs (l q))
+        ≤ abs (real.sqrt (↑m + 1) * l q) :
+
+        by conv { to_lhs, rw [← abs_sqrt_nat, ← abs_mul] }
+
+    ... ≤ abs (ε q (real.sqrt (↑m + 1) • y)) :
+        
+        by { rw [linear_map.map_smul, smul_eq_mul, abs_mul, abs_mul],
+             apply mul_le_mul_of_nonneg_left _ _,
+               { apply le_of_eq, congr' 1, rw [← H_l₂, finsupp.total_apply, finsupp.sum, linear_map.map_sum],
+                 rw [finset.sum_eq_single q],
+                 { rw [linear_map.map_smul, smul_eq_mul, duality, if_pos rfl, mul_one], },
+                 { intros p hp hne,
+                   simp [linear_map.map_smul, duality, hne.symm] },
+                 { intro h_q_ne_supp,
+                   simp [finsupp.not_mem_support_iff.mp h_q_ne_supp] } },
+              { exact abs_nonneg _ } }
+
+    ... ≤ l.support.sum (λ x : Q (m + 1), abs (l x) * abs ((ε q) ((f (m + 1) : _) (e x)))) :
+
+        by { rw [← f_image_g y (by simpa using H_mem''), ← H_l₂, finsupp.total_apply,
+               finsupp.sum, linear_map.map_sum, linear_map.map_sum],
+             refine le_trans abs_triangle_sum _,
+             conv { congr, congr, skip, simp[abs_mul] } }
+
+    ... ≤ finset.sum (l.support ∩ set.to_finset H ∩ set.to_finset (Q.adjacent q))
+            (λ (x : Q (m + 1)), abs (l x) * abs ((ε q) ((f (m + 1) : _) (e x)))) :
+       
+        by { rw[← finset.sum_subset],
+               { intros x Hx, simp[-finsupp.mem_support_iff] at Hx, exact Hx.left },
+               { intros x H_mem H_not_mem,
+                 by_cases x ∈ H,
+                   { simp at H_mem H_not_mem, rw[f_matrix], have := (H_not_mem ‹_› ‹_›),
+                     change ¬ Q.adjacent _ _ at this, simp [Q.adjacent_comm, this] },
+                   { suffices : (l x) = 0,
+                       by {simp [this]},
+                     rw [finsupp.mem_supported'] at H_l₁, exact H_l₁ _ ‹_› } } }
+
+    ... ≤ ↑(finset.card (l.support ∩ set.to_finset H ∩ set.to_finset (Q.adjacent q))) * abs (l q) :
+
+        by { refine le_trans (finset.sum_le_sum _) _, exact λ p, abs (l q),
+             { intros x Hx, rw[f_matrix], simp at Hx,
+               have := Hx.right.right, change Q.adjacent _ _ at this,
+               rw [if_pos this.symm, mul_one], exact H_max x Hx.2.1 },
+             simp only [mul_one, finset.sum_const, add_monoid.smul_one, add_monoid.smul_eq_mul] }
+        
+    ... ≤ ↑(finset.card (set.to_finset (H ∩ Q.adjacent q))) * abs (l q) :
+
+        by { refine (mul_le_mul_right ‹_›).mpr _,
+             norm_cast, refine finset.card_le_of_subset _,
+             rw ← finset.coe_subset, simp only [finset.coe_inter, finset.coe_to_finset'],
+             rw set.inter_assoc, exact set.inter_subset_right _ _ }
 end
