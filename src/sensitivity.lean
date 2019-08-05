@@ -1,10 +1,5 @@
-import tactic
 import tactic.fin_cases
-import data.real.basic
-import linear_algebra.dual
-import linear_algebra.finsupp
 import linear_algebra.finite_dimensional
-import ring_theory.ideals
 import analysis.normed_space.basic
 
 noncomputable theory
