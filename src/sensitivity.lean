@@ -445,7 +445,6 @@ begin
   linarith
 end
 
-
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ (H ∩ q.adjacent).to_finset.card :=
 begin
@@ -457,8 +456,7 @@ begin
   { cases set.exists_mem_of_ne_empty hHe with r hr,
     cases @finset.max_of_mem _ _ (H.to_finset.image (λ q', abs (l q')))
       (abs (l r)) (finset.mem_image_of_mem _ (set.mem_to_finset.2 hr)) with x hx,
-    rcases finset.mem_image.1 (finset.mem_of_max hx) with ⟨q, hq, hqx⟩,
-    subst hqx,
+    rcases finset.mem_image.1 (finset.mem_of_max hx) with ⟨q, hq, rfl⟩,
     use q,
     refine ⟨set.mem_to_finset.1 hq, λ q' hq', _⟩,
     exact (finset.le_max_of_mem (finset.mem_image_of_mem _ (set.mem_to_finset.2 hq')) hx : _) }, -- get q by finset.sup?
@@ -480,7 +478,16 @@ begin
     by { exact (mul_le_mul_right H_q_pos).mp ‹_› },
   rw [← abs_sqrt_nat, ← abs_mul],
   transitivity abs (ε q (real.sqrt (↑m + 1) • y)),
-    { sorry },
+    { rw [linear_map.map_smul, smul_eq_mul, abs_mul, abs_mul],
+      apply mul_le_mul_of_nonneg_left _ _,
+      { apply le_of_eq, congr' 1, rw [← H_l₂, finsupp.total_apply, finsupp.sum, linear_map.map_sum],
+        rw [finset.sum_eq_single q],
+        { rw [linear_map.map_smul, smul_eq_mul, duality, if_pos rfl, mul_one], },
+        { intros p hp hne, sorry },
+        { sorry },
+      },
+      { exact abs_nonneg _ }
+      },
   rw [← f_image_g y (by simpa using H_mem''), ← H_l₂, finsupp.total_apply, finsupp.sum,
       linear_map.map_sum, linear_map.map_sum],
   refine le_trans abs_triangle_sum _,
