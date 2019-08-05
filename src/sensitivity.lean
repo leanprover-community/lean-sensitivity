@@ -37,11 +37,8 @@ open function
 /-- The hypercube.-/
 def Q (n) : Type := fin n → bool
 
-/-- The only element of Q0 -/
-def eQ0 : Q 0 := λ _, tt
-
-lemma Q0_unique (p : Q 0) : p = eQ0 :=
-by { ext x, fin_cases x }
+instance : unique (Q 0) :=
+⟨⟨λ _, tt⟩, by { intro, ext x, fin_cases x }⟩
 
 namespace Q
 variable (n : ℕ)
@@ -81,7 +78,8 @@ by rw [adjacent]
 lemma adjacent_iff_dist {x y : Q n} : x.adjacent y ↔ x.dist y = 1 :=
 begin
   induction n with n ih,
-  { rw [adjacent, false_iff, Q0_unique x, Q0_unique y, dist_self], exact zero_ne_one },
+  { rw [adjacent, false_iff],
+    convert zero_ne_one, apply_instance },
   { have : (0 : fin (n+1)) ∈ (finset.univ : finset (fin (n+1))) := finset.mem_univ _,
     rw [adjacent_succ_iff, dist, ← finset.insert_erase this, finset.sum_insert (finset.not_mem_erase _ _)],
     by_cases h : x 0 = y 0,
@@ -216,18 +214,8 @@ by rw e
 lemma e.is_basis (n) : is_basis ℝ (e : Q n → V n) :=
 begin
   induction n with n ih,
-  { split,
-    { apply linear_map.ker_eq_bot'.mpr,
-      intros v hv, ext i,
-      have : v = finsupp.single eQ0 (v eQ0),
-      { ext k,
-        simp only [Q0_unique k, finsupp.single, finsupp.single_eq_same] },
-      rw [finsupp.total_apply, this, finsupp.sum_single_index] at hv,
-      { simp only [e_zero_apply, smul_eq_mul, mul_one] at hv,
-        rwa [Q0_unique i, finsupp.zero_apply] },
-      { rw zero_smul } },
-    { refine (ideal.eq_top_iff_one _).mpr (submodule.subset_span _),
-      rw set.mem_range, exact ⟨(λ _, tt), rfl⟩ } },
+  { apply is_basis_singleton_one ℝ,
+    apply_instance },
   convert (is_basis_inl_union_inr ih ih).comp (Q.equiv_sum n) (Q.equiv_sum n).bijective,
   funext x,
   rw [e_succ_apply, function.comp_apply, Q.equiv_sum_apply],
@@ -284,8 +272,9 @@ end
 lemma duality {n : ℕ} (p q : Q n) : ε p (e q) = if p = q then 1 else 0 :=
 begin
   induction n with n IH,
-  { dsimp [ε, e],
-    simp [Q0_unique p, Q0_unique q] },
+  { rw (show p = q, from subsingleton.elim p q),
+    dsimp [ε, e],
+    simp },
   { cases hp : p 0 ; cases hq : q 0,
     all_goals {
       dsimp [ε, e],
@@ -320,7 +309,7 @@ begin
   induction n with n IH,
   { intros p q,
     dsimp [f, Q.adjacent],
-    simp [Q0_unique p, Q0_unique q] },
+    simp },
   { intros p q,
     have ite_nonneg : ite (q ∘ fin.succ = p ∘ fin.succ) (1 : ℝ) 0 ≥ 0,
     { by_cases h : q ∘ fin.succ = p ∘ fin.succ; simp [h] ; norm_num },
