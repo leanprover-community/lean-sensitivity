@@ -183,7 +183,7 @@ lemma cardinal.monoid_pow_eq_cardinal_pow {κ : cardinal.{u}} {n : ℕ} : κ ^ n
 begin
   induction n with n ih,
     {simp},
-    { rw[nat.cast_succ, cardinal.power_add, <-ih, cardinal.power_one, mul_comm], refl }
+    { rw[nat.cast_succ, cardinal.power_add, ← ih, cardinal.power_one, mul_comm], refl }
 end
 
 end cardinal_lemma
@@ -191,8 +191,9 @@ end cardinal_lemma
 instance {n}: finite_dimensional ℝ (V n) :=
 begin
   rw [finite_dimensional_iff_dim_lt_omega, dim_V],
+  -- what follows ought to be a one-liner
   suffices : ∃ k : ℕ, (↑2) ^ (↑k : cardinal.{0}) = (2 ^ n : cardinal.{0}),
-    by {cases this with k H_k, rw[<-H_k, <-cardinal.nat_cast_pow],
+    by {cases this with k H_k, rw[← H_k, ← cardinal.nat_cast_pow],
         exact cardinal.nat_lt_omega _},
   from ⟨n, by {convert (@cardinal.monoid_pow_eq_cardinal_pow 2 n).symm, simp}⟩
 end
@@ -356,7 +357,7 @@ begin
 end
 
 -- I don't understand why the type ascription is necessary here, when f_squared worked fine
-lemma f_image_g {m : ℕ} (w : V (m + 1)) (hv : ∃ v, w = g m v) :
+lemma f_image_g {m : ℕ} (w : V (m + 1)) (hv : ∃ v, g m v = w) :
   (f (m + 1) : V (m + 1) → V (m + 1)) w = real.sqrt (m + 1) • w :=
 begin
   rcases hv with ⟨v, rfl⟩,
@@ -477,11 +478,10 @@ begin
   refine ⟨q, ⟨‹_›, _⟩⟩,
   suffices : real.sqrt (↑m + 1) * abs (l q) ≤ ↑(_) * abs (l q),
     by { exact (mul_le_mul_right H_q_pos).mp ‹_› },
-  rw [<-abs_sqrt_nat, <-abs_mul],
+  rw [← abs_sqrt_nat, ← abs_mul],
   transitivity abs (ε q (real.sqrt (↑m + 1) • y)),
     { sorry },
-  rw[← f_image_g, ← H_l₂],
-    swap, {simp at H_mem'', rcases H_mem'' with ⟨v,Hv⟩, exact ⟨v, Hv.symm⟩},
+  rw[← f_image_g y (by simpa using H_mem''), ← H_l₂],
   rw[finsupp.total, finsupp.lsum], unfold_coes, dsimp, rw[finsupp.sum], -- unfolding finsupp.total
   simp only [refold_coe], rw[linear_map.map_sum, linear_map.map_sum],
   refine le_trans abs_triangle_sum _,
