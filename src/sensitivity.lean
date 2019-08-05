@@ -20,6 +20,23 @@ instance : directed_order ℝ :=
   abs a ≤ 0 ↔ a = 0 :=
 by rw [← not_lt, abs_pos_iff, not_not]
 
+lemma fin.succ_ne_zero {n} (k : fin n) : fin.succ k ≠ 0 :=
+begin
+  cases k with k hk,
+  intro h,
+  have : k + 1 = 0 := (fin.ext_iff _ _).1 h,
+  finish
+end
+
+lemma bxor_of_ne {x y : bool} (h : x ≠ y) : bxor x y = tt :=
+by cases x; cases y; refl <|> contradiction
+
+lemma iff.eq_cancel_left {α : Type*} {a b c : α} (h : b = c) :
+  (a = b ↔ a = c) := by rw h
+
+lemma iff.eq_cancel_right {α : Type*} {a b c : α} (h : a = b) :
+  (a = c ↔ b = c) := by rw h
+
 open function
 
 /-- The hypercube.-/
@@ -46,7 +63,7 @@ funext $ λ i, bool.bxor_comm _ _
 
 /-- The distance between two vertices of the hypercube.-/
 def dist (x y : Q n) : ℕ :=
-(finset.univ : finset (fin n)).sum $ λ i, cond (x.xor y i) 1  0
+(finset.univ : finset (fin n)).sum $ λ i, cond (x.xor y i) 1 0
 
 @[simp] lemma dist_self (x : Q n) : x.dist x = 0 :=
 finset.sum_eq_zero $ λ i hi, by simp only [xor, bxor_self, bool.cond_ff]
@@ -55,11 +72,45 @@ finset.sum_eq_zero $ λ i hi, by simp only [xor, bxor_self, bool.cond_ff]
 congr_arg ((finset.univ : finset (fin n)).sum) $
 by { funext i, simp [xor_comm] }
 
-/-- Two vertices of the hypercube are adjacent if their distance is 1.-/
-def adjacent (x y : Q n) : Prop := x.dist y = 1
+/-- The adjacency relation on Q^n: two vertices of the hypercube are adjacent if their distance is 1.-/
+def adjacent : Π {n : ℕ}, Q n → (set $ Q n)
+| 0 p q := false
+| (n+1) p q := (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨ (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ)
 
-/-- The set of n-/
-def neighbours (x : Q n) : set (Q n) := {y | x.adjacent y}
+@[simp] lemma not_adjacent_zero (p q : Q 0) : p.adjacent q = false := rfl
+
+lemma adjacent_succ_iff {p q : Q (n+1)} :
+  p.adjacent q ↔ (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨ (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ) :=
+by rw [adjacent]
+
+lemma adjacent_iff_dist {x y : Q n} : x.adjacent y ↔ x.dist y = 1 :=
+begin
+  induction n with n ih,
+  { rw [adjacent, false_iff, Q0_unique x, Q0_unique y, dist_self], exact zero_ne_one },
+  { have : (0 : fin (n+1)) ∈ (finset.univ : finset (fin (n+1))) := finset.mem_univ _,
+    rw [adjacent_succ_iff, dist, ← finset.insert_erase this, finset.sum_insert (finset.not_mem_erase _ _)],
+    by_cases h : x 0 = y 0,
+    { simp [h, xor, ih], apply iff.eq_cancel_right,
+      apply finset.sum_bij (λ (p : fin n) hp, p.succ),
+      { intros p hp, rw finset.mem_erase, exact ⟨fin.succ_ne_zero _, finset.mem_univ _⟩ },
+      { intros p hp, refl },
+      { intros p q hp hq hpq, apply fin.succ.inj hpq, },
+      { intros p hp, rw finset.mem_erase at hp, exact ⟨p.pred hp.1, finset.mem_univ _, (fin.succ_pred _ hp.1).symm⟩ } },
+    { simp only [h, xor, bxor_of_ne h, false_or, bxor, bool.cond_tt, ne.def, cond, false_and, true_and, bxor, not_false_iff],
+      rw [funext_iff, add_comm 1, nat.succ_inj', finset.sum_eq_zero_iff_of_nonneg (λ p hp, nat.zero_le _)],
+      { split; intros H p,
+        { intros hp, rw finset.mem_erase at hp, dsimp only [function.comp] at H,
+          rw [← fin.succ_pred _ hp.1, H (p.pred hp.1)], simp only [bxor_self, bool.cond_ff] },
+        { specialize H p.succ, rw finset.mem_erase at H, specialize H ⟨fin.succ_ne_zero _, finset.mem_univ _⟩,
+          simp only [function.comp_app], revert H,
+          generalize ha : (x p.succ) = a, generalize hb : y p.succ = b, cases a; cases b; simp } },
+      { apply_instance } } }
+end
+
+@[symm] lemma adjacent_symm {p q : Q n} : p.adjacent q ↔ q.adjacent p :=
+by simp only [adjacent_iff_dist, dist_symm]
+
+lemma adjacent.symm {p q : Q n} : p.adjacent q → q.adjacent p := adjacent_symm.1
 
 variable (n)
 
@@ -220,14 +271,6 @@ noncomputable def ε : Π {n : ℕ} (p : Q n), V n →ₗ[ℝ] ℝ
 | 0 _ := linear_map.id
 | (n+1) p := cond (p 0) ((ε $ p ∘ fin.succ).comp $ linear_map.fst _ _ _) ((ε $ p ∘ fin.succ).comp $ linear_map.snd _ _ _)
 
-lemma fin.succ_ne_zero {n} (k : fin n) : fin.succ k ≠ 0 :=
-begin
-  cases k with k hk,
-  intro h,
-  have : k + 1 = 0 := (fin.ext_iff _ _).1 h,
-  finish
-end
-
 open bool
 
 lemma Q_succ_n_eq {n} (p q : Q (n+1)) : p = q ↔ (p 0 = q 0 ∧ p ∘ fin.succ = q ∘ fin.succ) :=
@@ -276,36 +319,18 @@ begin
       finish } }
 end
 
-/-- The adjacency relation on Q^n. -/
-def adjacent : Π {n : ℕ}, Q n → (set $ Q n)
-| 0 p q := false
-| (n+1) p q := (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨ (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ)
-
-lemma adjacent.symm : Π {n} {p q}, @adjacent n p q ↔ adjacent q p
-| 0     p q := iff.rfl
-| (n+1) p q := begin
-  dsimp [adjacent],
-  rw [adjacent.symm],
-  simp [eq_comm]
-end
-
-@[reducible]def adjacent' : Π {n : ℕ}, Q n → (set $ Q n) :=
-λ n q, (λ p, adjacent p q)
-
-@[simp] lemma adjacent_of_adjacent' {n} (p q) : p ∈ @adjacent' n q ↔ q ∈ adjacent p := by refl
-
-lemma f_matrix {n} : ∀ (p q : Q n), abs (ε q (f n (e p))) = if adjacent p q then 1 else 0 :=
+lemma f_matrix {n} : ∀ (p q : Q n), abs (ε q (f n (e p))) = if p.adjacent q then 1 else 0 :=
 begin
   induction n with n IH,
   { intros p q,
-    dsimp [f, adjacent],
+    dsimp [f, Q.adjacent],
     simp [Q0_unique p, Q0_unique q] },
   { intros p q,
     have ite_nonneg : ite (q ∘ fin.succ = p ∘ fin.succ) (1 : ℝ) 0 ≥ 0,
     { by_cases h : q ∘ fin.succ = p ∘ fin.succ; simp [h] ; norm_num },
     cases hp : p 0 ; cases hq : q 0,
     all_goals {
-      dsimp [e, ε, f, adjacent],
+      dsimp [e, ε, f, Q.adjacent],
       rw [hp, hq],
       repeat { rw cond_tt },
       repeat { rw cond_ff },
@@ -421,7 +446,7 @@ end
 
 
 theorem degree_theorem :
-  ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ finset.card ({p | p ∈ H ∧ adjacent q p}.to_finset) :=
+  ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ (H ∩ q.adjacent).to_finset.card :=
 begin
   rcases exists_eigenvalue H ‹_› with ⟨y, ⟨H_mem, H_nonzero⟩⟩,
   cases H_mem with H_mem' H_mem'',
@@ -466,12 +491,12 @@ begin
   refine le_trans abs_triangle_sum _,
   conv { congr, congr, skip, simp[abs_mul] },
   rw[<-finset.sum_subset], show finset _,
-    exact (l.support ∩ H.to_finset ∩ ({p | adjacent p q}).to_finset), rotate,
+    exact (l.support ∩ H.to_finset ∩ (q.adjacent).to_finset), rotate,
     { intros x Hx, simp[-finsupp.mem_support_iff] at Hx, exact Hx.left },
     { intros x H_mem H_not_mem,
         by_cases x ∈ H,
           { simp at H_mem H_not_mem, rw[f_matrix], have := (H_not_mem ‹_› ‹_›),
-            change ¬ adjacent _ _ at this, simp* },
+            change ¬ Q.adjacent _ _ at this, simp [Q.adjacent.symm, this] },
           { suffices : (l x) = 0,
               by {simp [this]},
             rw [finsupp.mem_supported'] at H_l₁,
@@ -479,7 +504,8 @@ begin
 
   refine le_trans (finset.sum_le_sum _) _, exact λ p, abs (l q),
     { intros x Hx, rw[f_matrix], simp at Hx,
-      have := Hx.right.right, change adjacent _ _ at this, simp* },
+      have := Hx.right.right, change Q.adjacent _ _ at this, rw [if_pos this.symm],
+      simp [this.symm] },
     rw[finset.card_eq_sum_ones, finset.sum_factor_constant], simp,
     refine (mul_le_mul_right ‹_›).mpr _,
     change _ ≤ ↑((finset.card (set.to_finset {p : Q (m + 1) | p ∈ H ∧ adjacent q p}))),
