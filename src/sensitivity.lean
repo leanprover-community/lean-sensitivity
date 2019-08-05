@@ -370,8 +370,8 @@ begin
     cases @finset.max_of_mem _ _ (H.to_finset.image (λ q', abs (l q')))
       (abs (l r)) (finset.mem_image_of_mem _ (set.mem_to_finset.2 hr)) with x hx,
     rcases finset.mem_image.1 (finset.mem_of_max hx) with ⟨q, hq, rfl⟩,
-    refine ⟨q, ⟨set.mem_to_finset.1 hq, λ q' hq', _⟩⟩,
-    exact (finset.le_max_of_mem (finset.mem_image_of_mem _ (set.mem_to_finset.2 hq')) hx : _) },
+    refine ⟨q, set.mem_to_finset.1 hq,
+      λ q' hq', (finset.le_max_of_mem (finset.mem_image_of_mem _ (set.mem_to_finset.2 hq')) hx : _)⟩ },
 
   have H_q_pos : 0 < abs (l q),
   { rw [abs_pos_iff], contrapose! H_nonzero,
