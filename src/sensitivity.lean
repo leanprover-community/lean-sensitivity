@@ -364,7 +364,8 @@ example {α} (s : finset α) (H_sub : s ⊆ ∅) : s = ∅ := finset.subset_empt
 lemma finset.sum_remove_zeros {α β : Type*} [add_comm_group β] {s : finset α} {f : α → β} (t : finset α) (H_sub : t ⊆ s) (Ht : ∀ x ∈ s, f x = 0 ↔ x ∈ (s \ t)) : s.sum f = t.sum f :=
 (@finset.sum_subset _ _ t s f _ ‹_› (by finish)).symm
 
-lemma finset.sum_factor_constant {α β : Type*} [field β] {s : finset α} (b : β) : (s.sum (λ x, b) = (s.sum (λ x, 1) * b)) := sorry
+lemma finset.sum_factor_constant {α β : Type*} [field β] {s : finset α} (b : β) :
+  (s.sum (λ x, b) = (s.sum (λ x, 1) * b)) := by rw [finset.sum_mul]; simp
 
 variables {m : ℕ} (H : set (Q (m + 1))) (hH : fintype.card H ≥ 2^m + 1)
 include hH
