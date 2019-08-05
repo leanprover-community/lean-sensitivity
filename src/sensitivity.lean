@@ -448,14 +448,11 @@ end
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ (H ∩ q.adjacent).to_finset.card :=
 begin
-  rcases exists_eigenvalue H ‹_› with ⟨y, ⟨H_mem, H_nonzero⟩⟩,
-  cases H_mem with H_mem' H_mem'',
+  rcases exists_eigenvalue H ‹_› with ⟨y, ⟨⟨H_mem', H_mem''⟩, H_nonzero⟩⟩,
   rcases (finsupp.mem_span_iff_total _).mp H_mem' with ⟨l, H_l₁, H_l₂⟩,
   have hHe : H ≠ ∅ ,
-  { assume hHe,
-    rw [hHe, set.empty_card'] at hH,
-    exact absurd hH dec_trivial },
-  have H_q_max : ∃ q, q ∈ H ∧ ∀ q', q' ∈ H → abs (l q') ≤ abs (l q),
+  { contrapose! hH, rw [hH, set.empty_card'], exact nat.zero_lt_succ _ },
+  obtain ⟨q, H_mem_H, H_max⟩ : ∃ q, q ∈ H ∧ ∀ q', q' ∈ H → abs (l q') ≤ abs (l q),
   { cases set.exists_mem_of_ne_empty hHe with r hr,
     cases @finset.max_of_mem _ _ (H.to_finset.image (λ q', abs (l q')))
       (abs (l r)) (finset.mem_image_of_mem _ (set.mem_to_finset.2 hr)) with x hx,
@@ -464,7 +461,6 @@ begin
     use q,
     refine ⟨set.mem_to_finset.1 hq, λ q' hq', _⟩,
     exact (finset.le_max_of_mem (finset.mem_image_of_mem _ (set.mem_to_finset.2 hq')) hx : _) }, -- get q by finset.sup?
-  rcases H_q_max with ⟨q, H_mem_H, H_max⟩,
   have H_q_pos : 0 < abs (l q),
   { rw [abs_pos_iff],
     assume h,
@@ -483,20 +479,20 @@ begin
     by { exact (mul_le_mul_right H_q_pos).mp ‹_› },
   rw [<-abs_sqrt_nat, <-abs_mul],
   transitivity abs (ε q (real.sqrt (↑m + 1) • y)),
-    {  },
-  rw[<-f_image_g, <-H_l₂],
+    { sorry },
+  rw[← f_image_g, ← H_l₂],
     swap, {simp at H_mem'', rcases H_mem'' with ⟨v,Hv⟩, exact ⟨v, Hv.symm⟩},
   rw[finsupp.total, finsupp.lsum], unfold_coes, dsimp, rw[finsupp.sum], -- unfolding finsupp.total
   simp only [refold_coe], rw[linear_map.map_sum, linear_map.map_sum],
   refine le_trans abs_triangle_sum _,
   conv { congr, congr, skip, simp[abs_mul] },
-  rw[<-finset.sum_subset], show finset _,
+  rw[← finset.sum_subset], show finset _,
     exact (l.support ∩ H.to_finset ∩ (q.adjacent).to_finset), rotate,
     { intros x Hx, simp[-finsupp.mem_support_iff] at Hx, exact Hx.left },
     { intros x H_mem H_not_mem,
         by_cases x ∈ H,
           { simp at H_mem H_not_mem, rw[f_matrix], have := (H_not_mem ‹_› ‹_›),
-            change ¬ Q.adjacent _ _ at this, simp [Q.adjacent.symm, this] },
+            change ¬ Q.adjacent _ _ at this, simp [Q.adjacent_symm, this] },
           { suffices : (l x) = 0,
               by {simp [this]},
             rw [finsupp.mem_supported'] at H_l₁,
@@ -504,11 +500,11 @@ begin
 
   refine le_trans (finset.sum_le_sum _) _, exact λ p, abs (l q),
     { intros x Hx, rw[f_matrix], simp at Hx,
-      have := Hx.right.right, change Q.adjacent _ _ at this, rw [if_pos this.symm],
-      simp [this.symm] },
+      have := Hx.right.right, change Q.adjacent _ _ at this,
+      rw [if_pos this.symm, mul_one], exact H_max x Hx.2.1 },
     rw[finset.card_eq_sum_ones, finset.sum_factor_constant], simp,
     refine (mul_le_mul_right ‹_›).mpr _,
-    change _ ≤ ↑((finset.card (set.to_finset {p : Q (m + 1) | p ∈ H ∧ adjacent q p}))),
-    norm_cast, refine finset.card_le_of_subset _,
-    intros x Hx, simp at Hx, rcases Hx with ⟨Hx₁, Hx₂, Hx₃⟩, simp*, rwa adjacent.symm
+    -- change _ ≤ ↑((finset.card (set.to_finset {p : Q (m + 1) | p ∈ H ∧ q.adjacent p}))),
+    -- norm_cast, refine finset.card_le_of_subset _,
+    -- intros x Hx, simp at Hx, rcases Hx with ⟨Hx₁, Hx₂, Hx₃⟩, simp*, rwa adjacent_symm
 end
