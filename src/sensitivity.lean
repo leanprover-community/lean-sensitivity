@@ -12,6 +12,10 @@ noncomputable theory
 local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
+instance : directed_order ℝ :=
+{ directed := λ i j, ⟨max i j, le_max_left _ _, le_max_right _ _⟩,
+  ..real.linear_order }
+
 @[simp] lemma abs_nonpos_iff {α : Type*} [decidable_linear_ordered_comm_group α] {a : α} :
   abs a ≤ 0 ↔ a = 0 :=
 by rw [← not_lt, abs_pos_iff, not_not]
@@ -415,14 +419,26 @@ begin
   linarith
 end
 
+
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ finset.card ({p | p ∈ H ∧ adjacent q p}.to_finset) :=
 begin
   rcases exists_eigenvalue H ‹_› with ⟨y, ⟨H_mem, H_nonzero⟩⟩,
   cases H_mem with H_mem' H_mem'',
   rcases (finsupp.mem_span_iff_total _).mp H_mem' with ⟨l, H_l₁, H_l₂⟩,
+  have hHe : H ≠ ∅ ,
+  { assume hHe,
+    rw [hHe, set.empty_card'] at hH,
+    exact absurd hH dec_trivial },
   have H_q_max : ∃ q, q ∈ H ∧ ∀ q', q' ∈ H → abs (l q') ≤ abs (l q),
-    by {sorry}, -- get q by finset.sup?
+  { cases set.exists_mem_of_ne_empty hHe with r hr,
+    cases @finset.max_of_mem _ _ (H.to_finset.image (λ q', abs (l q')))
+      (abs (l r)) (finset.mem_image_of_mem _ (set.mem_to_finset.2 hr)) with x hx,
+    rcases finset.mem_image.1 (finset.mem_of_max hx) with ⟨q, hq, hqx⟩,
+    subst hqx,
+    use q,
+    refine ⟨set.mem_to_finset.1 hq, λ q' hq', _⟩,
+    exact (finset.le_max_of_mem (finset.mem_image_of_mem _ (set.mem_to_finset.2 hq')) hx : _) }, -- get q by finset.sup?
   rcases H_q_max with ⟨q, H_mem_H, H_max⟩,
   have H_q_pos : 0 < abs (l q),
   { rw [abs_pos_iff],
@@ -442,7 +458,7 @@ begin
     by { exact (mul_le_mul_right H_q_pos).mp ‹_› },
   rw [<-abs_sqrt_nat, <-abs_mul],
   transitivity abs (ε q (real.sqrt (↑m + 1) • y)),
-    by {sorry},
+    {  },
   rw[<-f_image_g, <-H_l₂],
     swap, {simp at H_mem'', rcases H_mem'' with ⟨v,Hv⟩, exact ⟨v, Hv.symm⟩},
   rw[finsupp.total, finsupp.lsum], unfold_coes, dsimp, rw[finsupp.sum], -- unfolding finsupp.total
