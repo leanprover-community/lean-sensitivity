@@ -189,11 +189,22 @@ noncomputable def f : Π n, V n →ₗ[ℝ] V n
     (linear_map.copair (f n) linear_map.id)
     (linear_map.copair linear_map.id (-f n))
 
+@[simp] lemma f_zero : f 0 = 0 := rfl
+
+lemma f_succ_apply : ∀ {n : ℕ} v, (f (n+1) : _) v = (f n v.1 + v.2, v.1 - f n v.2)
+| n ⟨v, v'⟩ :=
+begin
+  rw f,
+  simp only [linear_map.id_apply, linear_map.pair_apply, prod.mk.inj_iff,
+    linear_map.neg_apply, sub_eq_add_neg, linear_map.copair_apply],
+  exact ⟨rfl, rfl⟩
+end
+
 lemma f_squared : ∀ {n : ℕ} v, (f n) (f n v) = (n : ℝ) • v
 -- The (n : ℝ) is necessary since `n • v` refers to the multiplication defined
 -- using only the addition of V.
-| 0 v := by {dunfold f, simp, refl}
-| (n+1) ⟨v, v'⟩ := by {dunfold f, simp [f_squared, add_smul]}
+| 0 v := by {simp only [nat.cast_zero, zero_smul], refl}
+| (n+1) ⟨v, v'⟩ := by simp [f_succ_apply, f_squared, add_smul]
 
 /-- The dual basis to e -/
 noncomputable def ε : Π {n : ℕ} (p : Q n), V n →ₗ[ℝ] ℝ
@@ -280,21 +291,19 @@ end
 noncomputable def g (m : ℕ) : V m →ₗ[ℝ] V (m+1) :=
 linear_map.pair (f m + real.sqrt (m+1) • linear_map.id) linear_map.id
 
+lemma g_apply : ∀ {m : ℕ} v, g m v = (f m v + real.sqrt (m+1) • v, v)
+| m v := by delta g; simp
+
 lemma g_injective {m : ℕ} : function.injective (g m) :=
-begin
-  rw[g], intros x₁ x₂ H_eq, simp at *, exact H_eq.right
-end
+by { rw g, intros x₁ x₂ h, simp only [linear_map.pair_apply, linear_map.id_apply, prod.mk.inj_iff] at h, exact h.right }
 
 -- I don't understand why the type ascription is necessary here, when f_squared worked fine
 lemma f_image_g {m : ℕ} (w : V (m + 1)) (hv : ∃ v, g m v = w) :
   (f (m + 1) : V (m + 1) → V (m + 1)) w = real.sqrt (m + 1) • w :=
 begin
   rcases hv with ⟨v, rfl⟩,
-  dsimp [g],
-  erw f,
-  simp [f_squared],
-  rw [smul_add, smul_smul, real.mul_self_sqrt (by exact_mod_cast zero_le _ : 0 ≤ (1 : ℝ) + m), add_smul, one_smul],
-  abel,
+  have : real.sqrt (m+1) * real.sqrt (m+1) = m+1 := real.mul_self_sqrt (by exact_mod_cast zero_le _),
+  simp [-add_comm, this, f_succ_apply, g_apply, f_squared, smul_add, add_smul, smul_smul],
 end
 
 lemma injective_e {n} : injective (@e n) :=
@@ -406,14 +415,13 @@ begin
               by {simp [this]},
             rw [finsupp.mem_supported'] at H_l₁,
             exact H_l₁ _ ‹_› }},
-
   refine le_trans (finset.sum_le_sum _) _, exact λ p, abs (l q),
     { intros x Hx, rw[f_matrix], simp at Hx,
       have := Hx.right.right, change Q.adjacent _ _ at this,
       rw [if_pos this.symm, mul_one], exact H_max x Hx.2.1 },
-    rw [finset.card_eq_sum_ones, finset.sum_factor_constant],
-    simp only [finset.inter_assoc, mul_one, id.def, finset.sum_const, add_monoid.smul_one, nat.smul_eq_mul],
+    simp only [mul_one, id.def, finset.sum_const, add_monoid.smul_one, add_monoid.smul_eq_mul],
     refine (mul_le_mul_right ‹_›).mpr _,
-    norm_cast, refine finset.card_le_of_subset _, rw ← finset.coe_subset,
-    simpa only [finset.coe_inter, finset.coe_to_finset'] using set.inter_subset_right _ _
+    norm_cast, refine finset.card_le_of_subset _,
+    rw ← finset.coe_subset, simp only [finset.coe_inter, finset.coe_to_finset'],
+    rw set.inter_assoc, exact set.inter_subset_right _ _
 end
