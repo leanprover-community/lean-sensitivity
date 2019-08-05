@@ -69,3 +69,11 @@ example {α} (s : finset α) (H_sub : s ⊆ ∅) : s = ∅ := finset.subset_empt
 lemma finset.sum_factor_constant {α β : Type*} [field β] {s : finset α} (b : β) :
   (s.sum (λ x, b) = (s.sum (λ x, 1) * b)) := by rw [finset.sum_mul]; simp
 
+def equiv_unique (α : Type*) (β : Type*) [unique α] [discrete_field β] :
+  (α →₀ β) ≃ₗ[β] β :=
+{ to_fun := λ f, f (default α),
+  inv_fun := finsupp.single (default α),
+  add := λ f g, finsupp.add_apply,
+  smul := λ b f, rfl,
+  left_inv := λ f, (finsupp.unique_single _).symm,
+  right_inv := λ b, finsupp.single_eq_same }
