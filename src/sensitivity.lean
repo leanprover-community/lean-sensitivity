@@ -277,7 +277,13 @@ def adjacent : Π {n : ℕ}, Q n → (set $ Q n)
 | 0 p q := false
 | (n+1) p q := (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨ (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ)
 
-lemma adjacent.symm {n} {p q} : @adjacent n p q ↔ adjacent q p := sorry
+lemma adjacent.symm : Π {n} {p q}, @adjacent n p q ↔ adjacent q p
+| 0     p q := iff.rfl
+| (n+1) p q := begin
+  dsimp [adjacent],
+  rw [adjacent.symm],
+  simp [eq_comm]
+end
 
 @[reducible]def adjacent' : Π {n : ℕ}, Q n → (set $ Q n) :=
 λ n q, (λ p, adjacent p q)
