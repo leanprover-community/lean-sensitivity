@@ -130,6 +130,16 @@ begin
   { introsI n IH, dunfold V, apply_instance }
 end
 
+-- These type class short circuts shave ~56% off the compile time
+def V.module {n} : module ℝ (V n) := by apply_instance
+def V.add_comm_semigroup {n} : add_comm_semigroup (V n) := by apply_instance
+def V.add_comm_monoid {n} : add_comm_monoid (V n) := by apply_instance
+def V.has_scalar {n} : has_scalar ℝ (V n) := by apply_instance
+def V.has_add {n} : has_add (V n) := by apply_instance
+
+local attribute [instance, priority 100000]
+  V.module V.add_comm_semigroup V.add_comm_monoid V.has_scalar V.has_add
+
 lemma dim_V {n : ℕ} : vector_space.dim ℝ (V n) = 2^n :=
 begin
   induction n with n IH,
@@ -203,7 +213,7 @@ end
 lemma f_squared : ∀ {n : ℕ} v, (f n) (f n v) = (n : ℝ) • v
 -- The (n : ℝ) is necessary since `n • v` refers to the multiplication defined
 -- using only the addition of V.
-| 0 v := by {simp only [nat.cast_zero, zero_smul], refl}
+| 0 v := by { simp only [nat.cast_zero, zero_smul], refl }
 | (n+1) ⟨v, v'⟩ := by simp [f_succ_apply, f_squared, add_smul]
 
 /-- The dual basis to e -/
