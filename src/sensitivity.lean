@@ -273,9 +273,16 @@ begin
 end
 
 /-- The adjacency relation on Q^n. -/
-def adjacent : Π {n : ℕ}, Q n → Q n → Prop
+def adjacent : Π {n : ℕ}, Q n → (set $ Q n)
 | 0 p q := false
 | (n+1) p q := (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨ (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ)
+
+lemma adjacent.symm {n} {p q} : @adjacent n p q ↔ adjacent q p := sorry
+
+@[reducible]def adjacent' : Π {n : ℕ}, Q n → (set $ Q n) :=
+λ n q, (λ p, adjacent p q)
+
+@[simp] lemma adjacent_of_adjacent' {n} (p q) : p ∈ @adjacent' n q ↔ q ∈ adjacent p := by refl
 
 lemma f_matrix {n} : ∀ (p q : Q n), abs (ε q (f n (e p))) = if adjacent p q then 1 else 0 :=
 begin
@@ -345,6 +352,14 @@ linear_independent.injective (by norm_num) (e.is_basis n).1
 lemma range_restrict {α : Type*} {β : Type*} (f : α → β) (p : α → Prop) : set.range (restrict f p) = f '' (p : set α) :=
 by { ext x,  simp [restrict], refl }
 
+example {α} (s : finset α) (H_sub : s ⊆ ∅) : s = ∅ := finset.subset_empty.mp ‹_›
+
+-- TODO(jesse): remove later
+lemma finset.sum_remove_zeros {α β : Type*} [add_comm_group β] {s : finset α} {f : α → β} (t : finset α) (H_sub : t ⊆ s) (Ht : ∀ x ∈ s, f x = 0 ↔ x ∈ (s \ t)) : s.sum f = t.sum f :=
+(@finset.sum_subset _ _ t s f _ ‹_› (by finish)).symm
+
+lemma finset.sum_factor_constant {α β : Type*} [field β] {s : finset α} (b : β) : (s.sum (λ x, b) = (s.sum (λ x, 1) * b)) := sorry
+
 variables {m : ℕ} (H : set (Q (m + 1))) (hH : fintype.card H ≥ 2^m + 1)
 include hH
 
@@ -394,7 +409,7 @@ begin
 end
 
 theorem degree_theorem :
-  ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ fintype.card {p // p ∈ H ∧ q.adjacent p} :=
+  ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ finset.card ({p | p ∈ H ∧ adjacent q p}.to_finset) :=
 begin
   rcases exists_eigenvalue H ‹_› with ⟨y, ⟨H_mem, H_nonzero⟩⟩,
   cases H_mem with H_mem' H_mem'',
@@ -416,16 +431,35 @@ begin
     simp [hl0] at H_l₂,
     exact H_nonzero H_l₂.symm },
   refine ⟨q, ⟨‹_›, _⟩⟩,
-  suffices : real.sqrt (↑m + 1) * abs (l q) ≤ ↑(fintype.card {p // p ∈ H ∧ Q.adjacent q p}) * abs (l q),
+  suffices : real.sqrt (↑m + 1) * abs (l q) ≤ ↑(_) * abs (l q),
     by { exact (mul_le_mul_right H_q_pos).mp ‹_› },
   rw [<-abs_sqrt_nat, <-abs_mul],
   transitivity abs (ε q (real.sqrt (↑m + 1) • y)),
-    by sorry,
+    by {sorry},
   rw[<-f_image_g, <-H_l₂],
     swap, {simp at H_mem'', rcases H_mem'' with ⟨v,Hv⟩, exact ⟨v, Hv.symm⟩},
   rw[finsupp.total, finsupp.lsum], unfold_coes, dsimp, rw[finsupp.sum], -- unfolding finsupp.total
   simp only [refold_coe], rw[linear_map.map_sum, linear_map.map_sum],
   refine le_trans abs_triangle_sum _,
-  -- now use f_matrix, then H_max, then fintype.card_eq_sum_ones
-  sorry
+  conv { congr, congr, skip, simp[abs_mul] },
+  rw[<-finset.sum_subset], show finset _,
+    exact (l.support ∩ H.to_finset ∩ ({p | adjacent p q}).to_finset), rotate,
+    { intros x Hx, simp[-finsupp.mem_support_iff] at Hx, exact Hx.left },
+    { intros x H_mem H_not_mem,
+        by_cases x ∈ H,
+          { simp at H_mem H_not_mem, rw[f_matrix], have := (H_not_mem ‹_› ‹_›),
+            change ¬ adjacent _ _ at this, simp* },
+          { suffices : (l x) = 0,
+              by {simp [this]},
+            rw [finsupp.mem_supported'] at H_l₁,
+            exact H_l₁ _ ‹_› }},
+
+  refine le_trans (finset.sum_le_sum _) _, exact λ p, abs (l q),
+    { intros x Hx, rw[f_matrix], simp at Hx,
+      have := Hx.right.right, change adjacent _ _ at this, simp* },
+    rw[finset.card_eq_sum_ones, finset.sum_factor_constant], simp,
+    refine (mul_le_mul_right ‹_›).mpr _,
+    change _ ≤ ↑((finset.card (set.to_finset {p : Q (m + 1) | p ∈ H ∧ adjacent q p}))),
+    norm_cast, refine finset.card_le_of_subset _,
+    intros x Hx, simp at Hx, rcases Hx with ⟨Hx₁, Hx₂, Hx₃⟩, simp*, rwa adjacent.symm
 end
