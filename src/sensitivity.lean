@@ -481,9 +481,8 @@ begin
   rw [← abs_sqrt_nat, ← abs_mul],
   transitivity abs (ε q (real.sqrt (↑m + 1) • y)),
     { sorry },
-  rw[← f_image_g y (by simpa using H_mem''), ← H_l₂],
-  rw[finsupp.total, finsupp.lsum], unfold_coes, dsimp, rw[finsupp.sum], -- unfolding finsupp.total
-  simp only [refold_coe], rw[linear_map.map_sum, linear_map.map_sum],
+  rw [← f_image_g y (by simpa using H_mem''), ← H_l₂, finsupp.total_apply, finsupp.sum,
+      linear_map.map_sum, linear_map.map_sum],
   refine le_trans abs_triangle_sum _,
   conv { congr, congr, skip, simp[abs_mul] },
   rw[← finset.sum_subset], show finset _,
@@ -502,9 +501,9 @@ begin
     { intros x Hx, rw[f_matrix], simp at Hx,
       have := Hx.right.right, change Q.adjacent _ _ at this,
       rw [if_pos this.symm, mul_one], exact H_max x Hx.2.1 },
-    rw[finset.card_eq_sum_ones, finset.sum_factor_constant], simp,
+    rw [finset.card_eq_sum_ones, finset.sum_factor_constant],
+    simp only [finset.inter_assoc, mul_one, id.def, finset.sum_const, add_monoid.smul_one, nat.smul_eq_mul],
     refine (mul_le_mul_right ‹_›).mpr _,
-    -- change _ ≤ ↑((finset.card (set.to_finset {p : Q (m + 1) | p ∈ H ∧ q.adjacent p}))),
-    -- norm_cast, refine finset.card_le_of_subset _,
-    -- intros x Hx, simp at Hx, rcases Hx with ⟨Hx₁, Hx₂, Hx₃⟩, simp*, rwa adjacent_symm
+    norm_cast, refine finset.card_le_of_subset _, rw ← finset.coe_subset,
+    simpa only [finset.coe_inter, finset.coe_to_finset'] using set.inter_subset_right _ _
 end
