@@ -242,8 +242,6 @@ noncomputable def f : Π n, V n →ₗ[ℝ] V n
     (linear_map.copair (f n) linear_map.id)
     (linear_map.copair linear_map.id (-f n))
 
-run_cmd tactic.skip
-
 lemma f_squared : ∀ {n : ℕ} v, (f n) (f n v) = (n : ℝ) • v
 -- The (n : ℝ) is necessary since `n • v` refers to the multiplication defined
 -- using only the addition of V.
