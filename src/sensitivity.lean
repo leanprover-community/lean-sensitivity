@@ -143,11 +143,8 @@ open finite_dimensional
 instance {n}: finite_dimensional ℝ (V n) :=
 begin
   rw [finite_dimensional_iff_dim_lt_omega, dim_V],
-  -- what follows ought to be a one-liner
-  suffices : ∃ k : ℕ, (↑2) ^ (↑k : cardinal.{0}) = (2 ^ n : cardinal.{0}),
-    by {cases this with k H_k, rw[← H_k, ← cardinal.nat_cast_pow],
-        exact cardinal.nat_lt_omega _},
-  from ⟨n, by {convert (@cardinal.monoid_pow_eq_cardinal_pow 2 n).symm, simp}⟩
+  convert cardinal.nat_lt_omega (2^n),
+  norm_cast
 end
 
 lemma findim_V {n} : findim ℝ (V n) = 2^n :=
@@ -192,22 +189,11 @@ noncomputable def f : Π n, V n →ₗ[ℝ] V n
     (linear_map.copair (f n) linear_map.id)
     (linear_map.copair linear_map.id (-f n))
 
-lemma f_squared {n : ℕ} : ∀ v, (f n) (f n v) = (n : ℝ) • v :=
+lemma f_squared : ∀ {n : ℕ} v, (f n) (f n v) = (n : ℝ) • v
 -- The (n : ℝ) is necessary since `n • v` refers to the multiplication defined
 -- using only the addition of V.
-begin
-  induction n with n IH,
-  { intro v, dunfold f, simp, refl },
-  { rintro ⟨v, v'⟩,
-    ext,
-    { dunfold f V,
-      conv_rhs { change ((n : ℝ) + 1) • v, rw add_smul },
-      simp [IH] },
-    { dunfold f V,
-      conv_rhs { change ((n : ℝ) + 1) • v', rw add_smul },
-      have : Π (x y : V n), -x + (y + x) = y := by { intros, abel }, -- ugh
-      simp [IH, this] } }
-end
+| 0 v := by {dunfold f, simp, refl}
+| (n+1) ⟨v, v'⟩ := by {dunfold f, simp [f_squared, add_smul]}
 
 /-- The dual basis to e -/
 noncomputable def ε : Π {n : ℕ} (p : Q n), V n →ₗ[ℝ] ℝ
@@ -400,7 +386,7 @@ begin
     { apply le_of_eq, congr' 1, rw [← H_l₂, finsupp.total_apply, finsupp.sum, linear_map.map_sum],
       rw [finset.sum_eq_single q],
       { rw [linear_map.map_smul, smul_eq_mul, duality, if_pos rfl, mul_one], },
-      { intros p hp hne, 
+      { intros p hp hne,
         simp [linear_map.map_smul, duality, hne.symm] },
       { intro h_q_ne_supp,
         simp [finsupp.not_mem_support_iff.mp h_q_ne_supp] } },

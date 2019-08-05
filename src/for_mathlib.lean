@@ -37,8 +37,8 @@ universe u
 lemma cardinal.monoid_pow_eq_cardinal_pow {κ : cardinal.{u}} {n : ℕ} : κ ^ n = (κ ^ (↑n : cardinal.{u})) :=
 begin
   induction n with n ih,
-    {simp},
-    { rw[nat.cast_succ, cardinal.power_add, ← ih, cardinal.power_one, mul_comm], refl }
+  { simp },
+  { rw[nat.cast_succ, cardinal.power_add, ← ih, cardinal.power_one, mul_comm], refl }
 end
 
 end cardinal_lemma
