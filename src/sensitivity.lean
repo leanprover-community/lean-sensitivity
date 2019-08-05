@@ -241,33 +241,17 @@ begin
   { rw (show p = q, from subsingleton.elim p q),
     dsimp [ε, e],
     simp },
-  { cases hp : p 0 ; cases hq : q 0,
+  { dsimp [ε, e],
+    cases hp : p 0 ; cases hq : q 0,
     all_goals {
-      dsimp [ε, e],
-      rw [hp, hq],
       repeat {rw cond_tt},
       repeat {rw cond_ff},
-      simp only [linear_map.fst_apply, linear_map.snd_apply, linear_map.comp_apply] },
-    { rw IH,
-      congr'  1,
-      rw Q_succ_n_eq,
-      finish },
-    { erw (ε _).map_zero,
-      have : p ≠ q,
-      { intro h,
-        rw Q_succ_n_eq p q at h,
-        finish },
-      simp [this] },
-    { erw (ε _).map_zero,
-      have : p ≠ q,
-      { intro h,
-        rw Q_succ_n_eq p q at h,
-        finish },
-      simp [this] },
-    { rw IH,
-      congr'  1,
-      rw Q_succ_n_eq,
-      finish } }
+      simp only [cond_tt, cond_ff, linear_map.fst_apply, linear_map.snd_apply, linear_map.comp_apply, IH],
+      try { congr'  1, rw Q_succ_n_eq, finish },
+      try {
+        erw (ε _).map_zero,
+        have : p ≠ q, { intro h, rw Q_succ_n_eq p q at h, finish },
+        simp [this] } } }
 end
 
 lemma f_matrix {n} : ∀ (p q : Q n), abs (ε q (f n (e p))) = if p.adjacent q then 1 else 0 :=
