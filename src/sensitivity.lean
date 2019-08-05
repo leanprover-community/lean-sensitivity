@@ -107,11 +107,6 @@ lemma adjacent.symm {p q : Q n} : p.adjacent q → q.adjacent p := adjacent_comm
 
 variable (n)
 
-/-- The cardinality of the hypercube.-/
-@[simp] lemma card : fintype.card (Q n) = 2^n :=
-calc _ = _ : fintype.card_fun
-   ... = _ : by simp only [fintype.card_fin, fintype.card_bool]
-
 /-- The (n+1)-dimensional hypercube is equivalent to two copies of the n-dimensional hypercube.-/
 def equiv_sum : Q (n+1) ≃ Q n ⊕ Q n :=
 { to_fun := λ x, cond (x 0)
