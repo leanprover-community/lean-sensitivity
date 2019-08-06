@@ -94,17 +94,12 @@ def equiv_sum : Q (n+1) ≃ Q n ⊕ Q n :=
   left_inv := λ x,
   begin
     dsimp only, cases h : x 0;
-    { funext i, dsimp only [bool.cond_tt, bool.cond_ff], split_ifs with H,
+    { funext i, dsimp only [bool.cond_tt, bool.cond_ff],
+      split_ifs with H,
       { rw [H, h] },
       { rw [function.comp_app, fin.succ_pred] } }
   end,
-  right_inv := λ x,
-  begin
-    cases x;
-    { simp only [dif_pos, bool.cond_tt, bool.cond_ff, cond, function.comp],
-      funext i, rw [dif_neg, i.pred_succ], rw [fin.ext_iff, fin.succ_val],
-      exact nat.succ_ne_zero _ }
-  end }
+  right_inv := by rintro ⟨⟩; { funext, simp [function.comp, fin.pred_succ, fin.succ_ne_zero] } }
 
 lemma equiv_sum_apply (x : Q (n+1)) :
   equiv_sum n x = cond (x 0) (sum.inl (x ∘ fin.succ)) (sum.inr (x ∘ fin.succ)) := rfl
@@ -162,7 +157,7 @@ begin
   have := findim_eq_dim ℝ (V n),
   rw dim_V at this,
   rw [← cardinal.nat_cast_inj, this],
-  simp[cardinal.monoid_pow_eq_cardinal_pow]
+  simp [cardinal.monoid_pow_eq_cardinal_pow]
 end
 
 /-- The basis of V indexed by the hypercube.-/
@@ -170,8 +165,7 @@ noncomputable def e : Π {n}, Q n → V n
 | 0     := λ _, (1:ℝ)
 | (n+1) := λ x, cond (x 0) (e (x ∘ fin.succ), 0) (0, e (x ∘ fin.succ))
 
-@[simp] lemma e_zero_apply (x : Q 0) :
-  e x = (1 : ℝ) := rfl
+@[simp] lemma e_zero_apply (x : Q 0) : e x = (1 : ℝ) := rfl
 
 lemma e_succ_apply {n} (x : Q (n+1)) :
   e x = cond (x 0) (e (x ∘ fin.succ), 0) (0, e (x ∘ fin.succ)) :=
@@ -226,13 +220,13 @@ open bool
 lemma Q_succ_n_eq {n} (p q : Q (n+1)) : p = q ↔ (p 0 = q 0 ∧ p ∘ fin.succ = q ∘ fin.succ) :=
 begin
   split,
-  { intro h, split ; rw h ; refl, },
+  { intro h, rw h, exact ⟨rfl, rfl⟩, },
   { rintros ⟨h₀, h⟩,
     ext x,
     by_cases hx : x = 0,
     { rwa hx },
-    rw ← fin.succ_pred x hx,
-    convert congr_fun h (fin.pred x hx) }
+    { rw ← fin.succ_pred x hx,
+      convert congr_fun h (fin.pred x hx) } }
 end
 
 lemma duality {n : ℕ} (p q : Q n) : ε p (e q) = if p = q then 1 else 0 :=
@@ -265,9 +259,9 @@ begin
     { split_ifs ; norm_num },
     have f_map_zero := (show linear_map ℝ (V (n+0)) (V n), from f n).map_zero,
     cases hp : p 0 ; cases hq : q 0,
-    all_goals 
-    { dsimp [e, ε, f], 
-      rw [hp, hq], 
+    all_goals
+    { dsimp [e, ε, f],
+      rw [hp, hq],
       repeat {rw cond_tt},
       repeat {rw cond_ff},
       simp [Q.adjacent_succ_iff, hp, hq, IH, duality, f_map_zero, abs_of_nonneg ite_nonneg],
@@ -343,8 +337,6 @@ begin
   linarith
 end
 
-.
-
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ (H ∩ q.adjacent).to_finset.card :=
 begin
@@ -372,7 +364,7 @@ begin
     suffices : l = 0,
     { simp [this] at H_l₂, exact H_l₂.symm },
     ext q', by_cases hq' : q' ∈ H,
-    { revert q', simpa [H_nonzero] using H_max },
+    { simpa [H_nonzero] using H_max _ hq' },
     { rw finsupp.mem_supported' at H_l₁, exact H_l₁ _ hq' } },
 
   refine ⟨q, ‹_›, _⟩,
