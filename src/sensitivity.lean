@@ -30,8 +30,6 @@ def adjacent {n : ℕ} (p : Q n) : set (Q n) := λ q, ∃! i, p i ≠ q i
 lemma not_adjacent_zero (p q : Q 0) : ¬ p.adjacent q :=
 by rintros ⟨v, _⟩; apply fin_zero_elim v
 
-lemma fin_one_eq_zero (x : fin 1) : x = 0 := subsingleton.elim x 0
-
 lemma adj_succ_of_zero_neq {p q : Q (n+1)} (h0 : p 0 ≠ q 0) : p ∘ fin.succ = q ∘ fin.succ ↔ p.adjacent q :=
 begin
   split,
