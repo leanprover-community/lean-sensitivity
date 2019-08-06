@@ -64,10 +64,8 @@ begin
     { apply fin.succ_ne_zero } }
 end
 
-@[symm] lemma adjacent_comm {p q : Q n} : p.adjacent q ↔ q.adjacent p :=
+@[symm] lemma adjacent.symm {p q : Q n} : p.adjacent q ↔ q.adjacent p :=
 by simp only [adjacent, ne.symm_iff]
-
-lemma adjacent.symm {p q : Q n} : p.adjacent q → q.adjacent p := adjacent_comm.1
 
 variable (n)
 
