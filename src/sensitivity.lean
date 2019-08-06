@@ -9,7 +9,6 @@ local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
 lemma ne.symm_iff {α} {a b : α} : a ≠ b ↔ b ≠ a := ⟨ne.symm, ne.symm⟩
-lemma eq.symm_iff {α} {a b : α} : a = b ↔ b = a := ⟨eq.symm, eq.symm⟩
 
 open function
 
@@ -26,73 +25,44 @@ instance : fintype (Q n) := by delta Q; apply_instance
 
 variable {n}
 
-def xor (x y : Q n) : Q n :=
-λ i, bxor (x i) (y i)
-
-@[symm] lemma xor_comm (x y : Q n) : x.xor y = y.xor x :=
-funext $ λ i, bool.bxor_comm _ _
-
-/-- The distance between two vertices of the hypercube.-/
-def dist (x y : Q n) : ℕ :=
-(finset.univ : finset (fin n)).sum $ λ i, cond (x.xor y i) 1 0
-
-@[simp] lemma dist_self (x : Q n) : x.dist x = 0 :=
-finset.sum_eq_zero $ λ i hi, by simp only [xor, bxor_self, bool.cond_ff]
-
-@[symm] lemma dist_symm (x y : Q n) : x.dist y = y.dist x :=
-congr_arg ((finset.univ : finset (fin n)).sum) $
-by { funext i, simp [xor_comm] }
-
 def adjacent {n : ℕ} (p : Q n) : set (Q n) := λ q, ∃! i, p i ≠ q i
 
-@[simp] lemma not_adjacent_zero (p q : Q 0) : ¬ p.adjacent q :=
+lemma not_adjacent_zero (p q : Q 0) : ¬ p.adjacent q :=
 by rintros ⟨v, _⟩; apply fin_zero_elim v
 
 lemma fin_one_eq_zero (x : fin 1) : x = 0 := subsingleton.elim x 0
 
-lemma adjacent_succ_iff {p q : Q (n+1)} :
-  p.adjacent q ↔ (p 0 = q 0 ∧ adjacent (p ∘ fin.succ) (q ∘ fin.succ)) ∨
-                 (p 0 ≠ q 0 ∧ p ∘ fin.succ = q ∘ fin.succ) :=
+lemma adj_succ_of_zero_neq {p q : Q (n+1)} (h0 : p 0 ≠ q 0) : p ∘ fin.succ = q ∘ fin.succ ↔ p.adjacent q :=
 begin
-  cases n with n,
-  { split,
-    { rintro ⟨i, h_adj_i, _⟩,
-      right, split,
-      { convert h_adj_i },
-      { ext x, apply fin_zero_elim x } },
-    { rintro (⟨h_eq, h_adj⟩|⟨h_ne, h_comp⟩),
-      { cases h_adj with x _, apply fin_zero_elim x },
-      { refine ⟨0, h_ne, _⟩,
-        intros _ _, apply fin_one_eq_zero } } },
-  { split,
-    { rintro ⟨i, h_ne, h_comp⟩,
-      by_cases h_zero : i = 0,
-      { right, split,
-        { rwa h_zero at h_ne },
-        { ext x,
-          have h_xsucc : x.succ ≠ i, { rw h_zero, apply fin.succ_ne_zero },
-          contrapose! h_xsucc,
-          exact h_comp _ h_xsucc } },
-      { left, split,
-        { contrapose! h_zero, rw h_comp _ h_zero },
-        { dsimp at h_comp,
-          use i.pred h_zero, simp [h_zero, h_ne],
-          intros r hr,
-          simp [eq.symm (h_comp _ hr)] } } },
-    { rintro (⟨h_eq, h_adj⟩|⟨h_ne, h_comp⟩),
-      { rcases h_adj with ⟨i, hi1, hi2⟩,
-        use [i.succ, hi1],
-        intros r hr,
-        have hr' : r ≠ 0 := λ hz, by rw hz at hr; contradiction,
-        rw ←fin.succ_pred r hr' at hr,
-        rw [←hi2 _ hr, fin.succ_pred] },
-      { use [0, h_ne],
-        intros r hr,
-        contrapose! hr,
-        rw ←fin.succ_pred r hr,
-        apply congr_fun h_comp } } }
+  split,
+  { intro heq,
+    use [0, h0],
+    intros y hy,
+    contrapose! hy,
+    rw ←fin.succ_pred _ hy,
+    apply congr_fun heq },
+  { rintros ⟨i, h_eq, h_uni⟩,
+    ext x, by_contradiction hx,
+    apply fin.succ_ne_zero x,
+    rw [h_uni _ hx, h_uni _ h0] }
 end
 
+lemma adj_succ_of_zero_eq {p q : Q (n+1)} (h0 : p 0 = q 0) :
+  Q.adjacent (p ∘ fin.succ) (q ∘ fin.succ) ↔ p.adjacent q :=
+begin
+  split,
+  { rintros ⟨i, h_eq, h_uni⟩,
+    use [i.succ, h_eq],
+    intros y hy,
+    rw [←fin.pred_inj, fin.pred_succ],
+    { apply h_uni, change p (fin.pred _ _).succ ≠ q (fin.pred _ _).succ, simp [hy] },
+    { contrapose! hy, rw [hy, h0] },
+    { apply fin.succ_ne_zero } },
+  { rintros ⟨i, h_eq, h_uni⟩,
+    have h_i : i ≠ 0, from λ h_i, absurd h0 (by rwa h_i at h_eq),
+    use [i.pred h_i, show p (fin.succ (fin.pred i _)) ≠ q (fin.succ (fin.pred i _)), by rwa [fin.succ_pred]],
+    intros y hy, simp [eq.symm (h_uni _ hy)] }
+end
 
 @[symm] lemma adjacent_comm {p q : Q n} : p.adjacent q ↔ q.adjacent p :=
 by simp only [adjacent, ne.symm_iff]
@@ -276,14 +246,11 @@ begin
     have ite_nonneg : ite (q ∘ fin.succ = p ∘ fin.succ) (1 : ℝ) 0 ≥ 0,
     { split_ifs ; norm_num },
     have f_map_zero := (show linear_map ℝ (V (n+0)) (V n), from f n).map_zero,
-    cases hp : p 0 ; cases hq : q 0,
-    all_goals
-    { dsimp [e, ε, f],
-      rw [hp, hq],
-      repeat {rw cond_tt},
-      repeat {rw cond_ff},
-      simp [Q.adjacent_succ_iff, hp, hq, IH, duality, f_map_zero, abs_of_nonneg ite_nonneg],
-      congr } }
+    dsimp [e, ε, f], cases hp : p 0 ; cases hq : q 0 ; repeat {rw cond_tt}; repeat {rw cond_ff};
+    simp [f_map_zero, hp, hq, IH, duality, abs_of_nonneg ite_nonneg]; congr' 1,
+    rotate,
+    iterate 2 { rw Q.adj_succ_of_zero_neq, simp [hp, hq] },
+    iterate 2 { rw Q.adj_succ_of_zero_eq, simp [hp, hq] } }
 end
 
 /-- The linear operator g_n corresponding to Knuth's matrix B_n.
