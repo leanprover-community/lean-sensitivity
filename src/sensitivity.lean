@@ -1,4 +1,5 @@
 import tactic.fin_cases
+import tactic.apply_fun
 import linear_algebra.finite_dimensional
 import analysis.normed_space.basic
 import for_mathlib
@@ -8,9 +9,8 @@ noncomputable theory
 local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
-lemma ne.symm_iff {α} {a b : α} : a ≠ b ↔ b ≠ a := ⟨ne.symm, ne.symm⟩
 
-open function
+open function bool linear_map
 
 /-- The hypercube.-/
 def Q (n) : Type := fin n → bool
@@ -23,7 +23,23 @@ variable (n : ℕ)
 
 instance : fintype (Q n) := by delta Q; apply_instance
 
+instance : inhabited (Q n) := ⟨λ i, tt⟩
+
+instance coeffs_module (n) : module ℝ (Q n →₀ ℝ) := finsupp.module (Q n) ℝ
+
 variable {n}
+
+lemma succ_n_eq (p q : Q (n+1)) : p = q ↔ (p 0 = q 0 ∧ p ∘ fin.succ = q ∘ fin.succ) :=
+begin
+  split,
+  { intro h, rw h, exact ⟨rfl, rfl⟩, },
+  { rintros ⟨h₀, h⟩,
+    ext x,
+    by_cases hx : x = 0,
+    { rwa hx },
+    { rw ← fin.succ_pred x hx,
+      convert congr_fun h (fin.pred x hx) } }
+end
 
 def adjacent {n : ℕ} (p : Q n) : set (Q n) := λ q, ∃! i, p i ≠ q i
 
@@ -66,29 +82,6 @@ end
 
 @[symm] lemma adjacent.symm {p q : Q n} : p.adjacent q ↔ q.adjacent p :=
 by simp only [adjacent, ne.symm_iff]
-
-variable (n)
-
-/-- The (n+1)-dimensional hypercube is equivalent to two copies of the n-dimensional hypercube.-/
-def equiv_sum : Q (n+1) ≃ Q n ⊕ Q n :=
-{ to_fun := λ x, cond (x 0)
-                   (sum.inl (x ∘ fin.succ))
-                   (sum.inr (x ∘ fin.succ)),
-  inv_fun := λ x, sum.rec_on x
-                   (λ y i, if h : i = 0 then tt else y (i.pred h))
-                   (λ y i, if h : i = 0 then ff else y (i.pred h)),
-  left_inv := λ x,
-  begin
-    dsimp only, cases h : x 0;
-    { funext i, dsimp only [bool.cond_tt, bool.cond_ff],
-      split_ifs with H,
-      { rw [H, h] },
-      { rw [function.comp_app, fin.succ_pred] } }
-  end,
-  right_inv := by rintro ⟨⟩; { funext, simp [function.comp, fin.pred_succ, fin.succ_ne_zero] } }
-
-lemma equiv_sum_apply (x : Q (n+1)) :
-  equiv_sum n x = cond (x 0) (sum.inl (x ∘ fin.succ)) (sum.inr (x ∘ fin.succ)) := rfl
 
 end Q
 
@@ -153,23 +146,105 @@ noncomputable def e : Π {n}, Q n → V n
 
 @[simp] lemma e_zero_apply (x : Q 0) : e x = (1 : ℝ) := rfl
 
-lemma e_succ_apply {n} (x : Q (n+1)) :
-  e x = cond (x 0) (e (x ∘ fin.succ), 0) (0, e (x ∘ fin.succ)) :=
-by rw e
+/-- The dual basis to e -/
+noncomputable def ε : Π {n : ℕ} (p : Q n), V n →ₗ[ℝ] ℝ
+| 0 _ := linear_map.id
+| (n+1) p := cond (p 0) ((ε $ p ∘ fin.succ).comp $ linear_map.fst _ _ _) ((ε $ p ∘ fin.succ).comp $ linear_map.snd _ _ _)
 
-lemma e.is_basis (n) : is_basis ℝ (e : Q n → V n) :=
+lemma duality {n : ℕ} (p q : Q n) : ε p (e q) = if p = q then 1 else 0 :=
+begin
+  induction n with n IH,
+  { rw (show p = q, from subsingleton.elim p q),
+    dsimp [ε, e],
+    simp },
+  { dsimp [ε, e],
+    cases hp : p 0 ; cases hq : q 0,
+    all_goals {
+      repeat {rw cond_tt},
+      repeat {rw cond_ff},
+      simp only [linear_map.fst_apply, linear_map.snd_apply, linear_map.comp_apply, IH],
+      try { congr' 1, rw Q.succ_n_eq, finish },
+      try {
+        erw (ε _).map_zero,
+        have : p ≠ q, { intro h, rw p.succ_n_eq q at h, finish },
+        simp [this] } } }
+end
+
+lemma epsilon_total {n : ℕ} {v : V n} (h : ∀ p : Q n, (ε p) v = 0) : v = 0 :=
 begin
   induction n with n ih,
-  { apply is_basis_singleton_one ℝ,
-    apply_instance },
-  convert (is_basis_inl_union_inr ih ih).comp (Q.equiv_sum n) (Q.equiv_sum n).bijective,
-  funext x,
-  rw [e_succ_apply, function.comp_apply, Q.equiv_sum_apply],
-  cases h : x 0;
-  { simp only [bool.cond_tt, bool.cond_ff, prod.mk.inj_iff, sum.elim_inl, sum.elim_inr, cond,
-      linear_map.inl_apply, linear_map.inr_apply, function.comp_apply, and_true],
-    exact ⟨rfl, rfl⟩ }
+  { dsimp [ε] at h, exact h (λ _, tt) },
+  { cases v with v₁ v₂,
+    ext ; change _ = (0 : V n) ; simp only [] ; apply ih ; intro p ;
+    [ let q : Q (n+1) := λ i, if h : i = 0 then tt else p (i.pred h),
+      let q : Q (n+1) := λ i, if h : i = 0 then ff else p (i.pred h)],
+    all_goals {
+      specialize h q,
+      rw [ε, show q 0 = tt, from rfl, cond_tt] at h <|> rw [ε, show q 0 = ff, from rfl, cond_ff] at h,
+      rwa show p = q ∘ fin.succ, by { ext, simp [q, fin.succ_ne_zero] } } }
 end
+
+/-- The coefficients of `v` on the basis `e` -/
+def coeffs {n : ℕ} (v : V n) : Q n →₀ ℝ := finsupp.equiv_fun_on_fintype.inv_fun (λ p : Q n, ε p v)
+
+/-- linear combinations of elements of `e` -/
+def lc {n : ℕ} : (Q n →₀ ℝ) → V n := finsupp.total (Q n) (V n) ℝ e
+
+@[simp]
+lemma ε_lc {n : ℕ} (l : Q n →₀ ℝ) (p : Q n) : ε p (lc l) = l p :=
+begin
+  erw [lc, finsupp.total_apply, linear_map.map_sum],
+  simp only [duality, map_smul, smul_eq_mul],
+  rw finset.sum_eq_single p,
+  { simp },
+  { intros q q_in q_ne,
+    simp [q_ne.symm] },
+  { intro p_not_in,
+    simp [finsupp.not_mem_support_iff.1 p_not_in] }
+end
+
+@[simp]
+lemma coeffs_lc {n : ℕ} (l : Q n →₀ ℝ) : coeffs (lc l) = l :=
+begin
+  simp only [coeffs, ε_lc],
+  ext p,
+  refl
+end
+
+/-- For any v : V n, \sum_{p ∈ Q n} (ε p v) • e p = v -/
+lemma decomposition {n : ℕ} (v : V n) : lc (coeffs v) = v :=
+begin
+  refine eq_of_sub_eq_zero (epsilon_total _),
+  intros p,
+  simp [-sub_eq_add_neg,linear_map.map_sub, sub_eq_zero_iff_eq],
+  refl
+end
+
+lemma epsilon_of_mem_span {n : ℕ} {H : set $ Q n} {x : V n} (h : x ∈ submodule.span ℝ (e '' H)) : 
+  ∀ p : Q n, ε p x ≠ 0 →  p ∈ H :=
+begin
+  intros p hp,
+  rcases (finsupp.mem_span_iff_total _).mp h with ⟨l, supp_l, sum_l⟩,
+  change lc l = x at sum_l,
+  rw finsupp.mem_supported' at supp_l,
+  by_contradiction p_not,
+  apply hp,
+  rw ← sum_l,
+  simpa using supp_l p p_not, 
+end
+
+lemma e_linear_indep {n : ℕ} : linear_independent ℝ (@e n) :=
+begin
+  rw linear_independent_iff,
+  intros l h,
+  change lc l = 0 at h,
+  ext p,
+  apply_fun (ε p) at h,
+  simpa using h
+end
+
+lemma injective_e {n} : injective (@e n) :=
+linear_independent.injective (by norm_num) e_linear_indep
 
 /-- The linear operator f_n corresponding to Huang's matrix A_n. -/
 noncomputable def f : Π n, V n →ₗ[ℝ] V n
@@ -195,44 +270,6 @@ lemma f_squared : ∀ {n : ℕ} v, (f n) (f n v) = (n : ℝ) • v
 -- using only the addition of V.
 | 0 v := by { simp only [nat.cast_zero, zero_smul], refl }
 | (n+1) ⟨v, v'⟩ := by simp [f_succ_apply, f_squared, add_smul]
-
-/-- The dual basis to e -/
-noncomputable def ε : Π {n : ℕ} (p : Q n), V n →ₗ[ℝ] ℝ
-| 0 _ := linear_map.id
-| (n+1) p := cond (p 0) ((ε $ p ∘ fin.succ).comp $ linear_map.fst _ _ _) ((ε $ p ∘ fin.succ).comp $ linear_map.snd _ _ _)
-
-open bool
-
-lemma Q_succ_n_eq {n} (p q : Q (n+1)) : p = q ↔ (p 0 = q 0 ∧ p ∘ fin.succ = q ∘ fin.succ) :=
-begin
-  split,
-  { intro h, rw h, exact ⟨rfl, rfl⟩, },
-  { rintros ⟨h₀, h⟩,
-    ext x,
-    by_cases hx : x = 0,
-    { rwa hx },
-    { rw ← fin.succ_pred x hx,
-      convert congr_fun h (fin.pred x hx) } }
-end
-
-lemma duality {n : ℕ} (p q : Q n) : ε p (e q) = if p = q then 1 else 0 :=
-begin
-  induction n with n IH,
-  { rw (show p = q, from subsingleton.elim p q),
-    dsimp [ε, e],
-    simp },
-  { dsimp [ε, e],
-    cases hp : p 0 ; cases hq : q 0,
-    all_goals {
-      repeat {rw cond_tt},
-      repeat {rw cond_ff},
-      simp only [linear_map.fst_apply, linear_map.snd_apply, linear_map.comp_apply, IH],
-      try { congr' 1, rw Q_succ_n_eq, finish },
-      try {
-        erw (ε _).map_zero,
-        have : p ≠ q, { intro h, rw Q_succ_n_eq p q at h, finish },
-        simp [this] } } }
-end
 
 lemma f_matrix {n} : ∀ (p q : Q n), abs (ε q (f n (e p))) = if q.adjacent p then 1 else 0 :=
 begin
@@ -278,18 +315,11 @@ begin
   simp [-add_comm, this, f_succ_apply, g_apply, f_squared, smul_add, add_smul, smul_smul],
 end
 
-lemma injective_e {n} : injective (@e n) :=
-linear_independent.injective (by norm_num) (e.is_basis n).1
-
 variables {m : ℕ} (H : set (Q (m + 1))) (hH : fintype.card H ≥ 2^m + 1)
 include hH
 
 local notation `d` := vector_space.dim ℝ
 local notation `fd` := findim ℝ
-
-attribute [elim_cast] cardinal.nat_cast_inj
-attribute [elim_cast] cardinal.nat_cast_lt
-attribute [elim_cast] cardinal.nat_cast_le
 
 lemma exists_eigenvalue :
   ∃ y ∈ submodule.span ℝ (e '' H) ⊓ (g m).range, y ≠ (0 : _) :=
@@ -309,7 +339,7 @@ begin
     apply dim_V },
   have dimW : d ↥W = fintype.card ↥H,
   { have li : linear_independent ℝ (restrict e H) :=
-      linear_independent.comp (e.is_basis _).1 _ subtype.val_injective,
+      linear_independent.comp e_linear_indep _ subtype.val_injective,
     have hdW := dim_span li,
     rw range_restrict at hdW,
     convert hdW,
@@ -324,73 +354,37 @@ end
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ (H ∩ q.adjacent).to_finset.card :=
 begin
-  rcases exists_eigenvalue H ‹_› with ⟨y, ⟨⟨H_mem', H_mem''⟩, H_nonzero⟩⟩,
-  rcases (finsupp.mem_span_iff_total _).mp H_mem' with ⟨l, H_l₁, H_l₂⟩,
-
-  have hl : ∀ (q : Q (m+1)), l q = (ε q : _) y,
-  { intro q, rw ← H_l₂, rw [finsupp.total_apply, finsupp.sum, linear_map.map_sum, finset.sum_eq_single q],
-    { rw [linear_map.map_smul, duality, if_pos rfl, smul_eq_mul, mul_one] },
-    { intros p hp hne, rw [linear_map.map_smul, duality, if_neg hne.symm, smul_zero] },
-    { rw finsupp.not_mem_support_iff, intro h, rw [h, zero_smul, (ε q).map_zero] } },
-
-  have hHe : H ≠ ∅ , { contrapose! hH, rw [hH, set.empty_card'], exact nat.zero_lt_succ _ },
-
-  obtain ⟨q, H_mem_H, H_max⟩ : ∃ q, q ∈ H ∧ ∀ q', q' ∈ H → abs (l q') ≤ abs (l q),
-  { cases set.exists_mem_of_ne_empty hHe with r hr,
-    cases @finset.max_of_mem _ _ (H.to_finset.image (λ q', abs (l q')))
-      (abs (l r)) (finset.mem_image_of_mem _ (set.mem_to_finset.2 hr)) with x hx,
-    rcases finset.mem_image.1 (finset.mem_of_max hx) with ⟨q, hq, rfl⟩,
-    refine ⟨q, set.mem_to_finset.1 hq,
-      λ q' hq', (finset.le_max_of_mem (finset.mem_image_of_mem _ (set.mem_to_finset.2 hq')) hx : _)⟩ },
-
-  have H_q_pos : 0 < abs (l q),
-  { rw [abs_pos_iff], contrapose! H_nonzero,
-    suffices : l = 0,
-    { simp [this] at H_l₂, exact H_l₂.symm },
-    ext q', by_cases hq' : q' ∈ H,
-    { simpa [H_nonzero] using H_max _ hq' },
-    { rw finsupp.mem_supported' at H_l₁, exact H_l₁ _ hq' } },
-
-  refine ⟨q, ‹_›, _⟩,
-
-  suffices : real.sqrt (↑m + 1) * abs (l q) ≤ ↑(_) * abs (l q),
-  { exact (mul_le_mul_right H_q_pos).mp ‹_› },
-
+  rcases exists_eigenvalue H hH with ⟨y, ⟨⟨y_mem_H, y_mem_g⟩, y_ne⟩⟩,
+  have coeffs_support : (coeffs y).support ⊆ H.to_finset,
+  { intros p p_in,
+    rw finsupp.mem_support_iff at p_in,
+    rw set.mem_to_finset,
+    exact epsilon_of_mem_span y_mem_H p p_in },
+  obtain ⟨q, H_max⟩ : ∃ q : Q (m+1), ∀ q' : Q (m+1), abs ((ε q' : _) y) ≤ abs (ε q y),
+    from fintype.exists_max _,
+  have H_q_pos : 0 < abs (ε q y),
+  { contrapose! y_ne,
+    exact epsilon_total (λ p,  abs_nonpos_iff.mp (le_trans (H_max p) y_ne)) },
+  refine ⟨q, epsilon_of_mem_span y_mem_H q (abs_pos_iff.mp H_q_pos), _⟩,
+  let s := real.sqrt (m+1),
+  suffices : s * abs (ε q y) ≤ ↑(_) * abs (ε q y),
+    from (mul_le_mul_right H_q_pos).mp ‹_›,
+  let φ : V (m+1) → V (m+1) := f (m+1),
   calc
-    real.sqrt (↑m + 1) * (abs (l q))
-        = abs (real.sqrt (↑m + 1) * l q) : by rw [abs_mul, abs_sqrt_nat]
-    ... = abs (ε q (real.sqrt (↑m + 1) • y)) : by rw [hl, linear_map.map_smul, smul_eq_mul]
-    ... ≤ l.support.sum (λ x : Q (m + 1), abs (l x) * abs ((ε q) ((f (m + 1) : _) (e x)))) :
-        begin
-          rw [← f_image_g y (by simpa using H_mem''), ← H_l₂, finsupp.total_apply,
-            finsupp.sum, linear_map.map_sum, linear_map.map_sum],
-          refine le_trans abs_triangle_sum _,
-          conv_lhs { congr, skip, simp [abs_mul] }
-        end
-    ... = finset.sum (l.support ∩ set.to_finset H ∩ set.to_finset (Q.adjacent q))
-            (λ (x : Q (m + 1)), abs (l x) * abs ((ε q) ((f (m + 1) : _) (e x)))) :
-        begin
-          rw [← finset.sum_subset],
-          { rw finset.inter_assoc, exact finset.inter_subset_left _ _ },
-          { intros x H_mem H_not_mem,
-            by_cases x ∈ H,
-              { simp at H_mem H_not_mem,
-                erw [f_matrix, if_neg (H_not_mem ‹_› ‹_›), mul_zero] },
-              { suffices : (l x) = 0, {simp [this]},
-                rw [finsupp.mem_supported'] at H_l₁, exact H_l₁ _ ‹_› } }
-        end
-    ... ≤ ↑(l.support ∩ H.to_finset ∩ q.adjacent.to_finset).card * abs (l q) :
-        begin
-          refine le_trans (finset.sum_le_sum _) _,
-          { exact λ p, abs (l q) },
-          { intros x Hx, simp at Hx, erw [f_matrix, if_pos Hx.2.2, mul_one], exact H_max x Hx.2.1 },
-          { simp only [mul_one, finset.sum_const, add_monoid.smul_one, add_monoid.smul_eq_mul] }
-        end
-    ... ≤ ↑(H ∩ Q.adjacent q).to_finset.card * abs (l q) :
-        begin
-          refine (mul_le_mul_right ‹_›).mpr _, norm_cast,
-          refine finset.card_le_of_subset (finset.coe_subset.mp _),
-          simpa only [finset.coe_inter, finset.coe_to_finset', set.inter_assoc]
-            using set.inter_subset_right _ _
-        end
+    s * (abs (ε q y))
+        = abs (ε q (s • y)) : by rw [map_smul, smul_eq_mul, abs_mul, abs_sqrt_nat]
+    ... = abs (ε q (φ y)) : by rw [← f_image_g y (by simpa using y_mem_g)]
+    ... = abs (ε q (φ (lc (coeffs y)))) : by rw decomposition y
+    ... = abs ((coeffs y).sum (λ (i : Q (m + 1)) (a : ℝ), a • ((ε q) ∘ (f (m + 1)) ∘ λ (i : Q (m + 1)), e i) i)): by
+                  { dsimp only [φ],
+                    erw [(f $ m+1).map_finsupp_total, (ε q).map_finsupp_total, finsupp.total_apply] ; apply_instance } 
+    ... ≤ (coeffs y).support.sum (λ p,
+           abs ((coeffs y p) * (ε q $ φ $ e p))) : abs_triangle_sum
+    ... = (coeffs y).support.sum (λ p, abs (coeffs y p) * ite (q.adjacent p) 1 0) : by simp only [abs_mul, f_matrix]
+    ... = ((coeffs y).support ∩ (Q.adjacent q).to_finset).sum (λ p, abs (coeffs y p)) : finset.sum_ite _ _ _
+    ... ≤ ((coeffs y).support ∩ (Q.adjacent q).to_finset).sum (λ p, abs (coeffs y q)) : finset.sum_le_sum (λ p _, H_max p)
+    ... = (finset.card ((coeffs y).support ∩ (Q.adjacent q).to_finset): ℝ) * abs (coeffs y q) : by rw [← smul_eq_mul, ← finset.sum_const']
+    ... ≤ (finset.card ((H ∩ Q.adjacent q).to_finset )) * abs (ε q y) : (mul_le_mul_right H_q_pos).mpr (by {
+             norm_cast,
+             exact finset.card_le_of_subset (by rw finset.inter_to_finset ; apply finset.inter_subset_inter_left coeffs_support) })
 end
