@@ -1,10 +1,126 @@
 import tactic.fin_cases
+import tactic.apply_fun
 import linear_algebra.finite_dimensional
 import analysis.normed_space.basic
-
+import linear_algebra.dual
 noncomputable theory
 
 open function
+
+section duality
+open vector_space module module.dual linear_map function
+
+local attribute [instance, priority 1] classical.prop_decidable
+local attribute [instance, priority 0] set.decidable_mem_of_fintype
+
+universes u v w
+variables {K : Type u} {V : Type v} {ι : Type w} [decidable_eq ι]
+variables [discrete_field K] [add_comm_group V] [vector_space K V] 
+          [decidable_eq V] [decidable_eq (ι → V)] [decidable_eq $ dual K V]
+
+
+local notation `V'` := dual K V
+
+/-- `e` and `ε` have characteristic properties of a basis and its dual -/
+structure dual_pair (e : ι → V) (ε : ι → V') :=
+(eval : ∀ i j : ι, ε i (e j) = if i = j then 1 else 0)
+(total : ∀ {v : V}, (∀ i, ε i v = 0) → v = 0)
+[finite : ∀ v : V, fintype {i | ε i v ≠ 0}]
+
+/-- Alternative constructor for `dual_pair` when the indexing type is finite -/
+def dual_pair.mk_finite [fintype ι] {e : ι → V} {ε : ι → V'} 
+  (eval : ∀ i j : ι, ε i (e j) = if i = j then 1 else 0)
+  (total : ∀ v : V, (∀ i, ε i v = 0) → v = 0) : dual_pair e ε :=
+{ eval := eval,
+  total := total,
+  finite := by apply_instance }
+
+variables {e : ι → V} {ε : ι → dual K V} (h : dual_pair e ε)
+
+include  h
+/-- The coefficients of `v` on the basis `e` -/
+def dual_pair.coeffs (v : V) : ι →₀ K :=
+{ to_fun := λ i, ε i v,
+  support := by { haveI := h.finite v, exact {i : ι | ε i v ≠ 0}.to_finset }, 
+  mem_support_to_fun := by {intro i, rw set.mem_to_finset, exact iff.rfl } }
+
+omit h
+
+@[simp]
+lemma dual_pair.coeffs_apply (v : V) (i : ι) : h.coeffs v i = ε i v := rfl
+
+def help_tcs : has_scalar K V := mul_action.to_has_scalar _ _
+
+local attribute [instance] help_tcs
+
+/-- linear combinations of elements of `e` -/
+def dual_pair.lc (e : ι → V) (l : ι →₀ K) : V := l.sum (λ (i : ι) (a : K), a • (e i))
+
+include h
+
+lemma dual_pair.dual_lc (l : ι →₀ K) (i : ι) : ε i (dual_pair.lc e l) = l i :=
+begin
+  erw linear_map.map_sum,
+  simp only [h.eval, map_smul, smul_eq_mul],
+  rw finset.sum_eq_single i,
+  { simp },
+  { intros q q_in q_ne,
+    simp [q_ne.symm] },
+  { intro p_not_in,
+    simp [finsupp.not_mem_support_iff.1 p_not_in] },
+end
+
+@[simp]
+lemma dual_pair.coeffs_lc (l : ι →₀ K) : h.coeffs (dual_pair.lc e l) = l :=
+by { ext i, rw [h.coeffs_apply, h.dual_lc] }
+
+/-- For any v : V n, \sum_{p ∈ Q n} (ε p v) • e p = v -/
+lemma dual_pair.decomposition (v : V) : dual_pair.lc e (h.coeffs v) = v :=
+begin
+  refine eq_of_sub_eq_zero (h.total _),
+  intros i,
+  simp [-sub_eq_add_neg, linear_map.map_sub, h.dual_lc, sub_eq_zero_iff_eq]
+end
+
+lemma dual_pair.mem_of_mem_span {H : set ι} {x : V} (hmem : x ∈ submodule.span K (e '' H)) : 
+  ∀ i : ι, ε i x ≠ 0 →  i ∈ H :=
+begin
+  intros i hi,
+  rcases (finsupp.mem_span_iff_total _).mp hmem with ⟨l, supp_l, sum_l⟩,
+  change dual_pair.lc e l = x at sum_l,
+  rw finsupp.mem_supported' at supp_l,
+  by_contradiction i_not,
+  apply hi,
+  rw ← sum_l,
+  simpa [h.dual_lc] using supp_l i i_not,
+end
+
+lemma dual_pair.is_basis : is_basis K e :=
+begin
+  split,
+  { rw linear_independent_iff,
+    intros l H,
+    change dual_pair.lc e l = 0 at H,
+    ext i,
+    apply_fun ε i at H,
+    simpa [h.dual_lc] using H },
+  { rw submodule.eq_top_iff',
+    intro v,
+    rw [← set.image_univ, finsupp.mem_span_iff_total],
+    exact ⟨h.coeffs v, by simp, h.decomposition v⟩ },
+end
+omit h
+
+
+lemma dual_pair.eq_dual  : ε = is_basis.dual_basis h.is_basis :=
+begin
+  funext i,
+  refine h.is_basis.ext _,
+  intro j,
+  erw [is_basis.to_dual_apply, h.eval]
+end
+
+end duality
 
 attribute [elim_cast] cardinal.nat_cast_inj
 attribute [elim_cast] cardinal.nat_cast_lt
