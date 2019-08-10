@@ -27,14 +27,6 @@ structure dual_pair (e : ι → V) (ε : ι → V') :=
 (total : ∀ {v : V}, (∀ i, ε i v = 0) → v = 0)
 [finite : ∀ v : V, fintype {i | ε i v ≠ 0}]
 
-/-- Alternative constructor for `dual_pair` when the indexing type is finite -/
-def dual_pair.mk_finite [fintype ι] {e : ι → V} {ε : ι → V'} 
-  (eval : ∀ i j : ι, ε i (e j) = if i = j then 1 else 0)
-  (total : ∀ v : V, (∀ i, ε i v = 0) → v = 0) : dual_pair e ε :=
-{ eval := eval,
-  total := total,
-  finite := by apply_instance }
-
 variables {e : ι → V} {ε : ι → dual K V} (h : dual_pair e ε)
 
 include  h
