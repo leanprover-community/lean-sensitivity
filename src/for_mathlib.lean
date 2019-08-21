@@ -3,6 +3,7 @@ import tactic.apply_fun
 import linear_algebra.finite_dimensional
 import analysis.normed_space.basic
 import linear_algebra.dual
+import linear_algebra.basis
 noncomputable theory
 
 open function
@@ -12,6 +13,28 @@ open vector_space module module.dual linear_map function
 
 local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
+
+section 
+
+open module vector_space 
+
+universes u v w
+variables {K : Type u} {V : Type v} {ι : Type w} [decidable_eq ι] [fintype ι] [decidable_eq V]
+variables [discrete_field K] [add_comm_group V] [vector_space K V] 
+variables {b : ι → V} (h : is_basis K b)
+include h
+
+lemma fg_of_finite_basis  : submodule.fg (⊤ : submodule K V) :=
+⟨ finset.univ.image b, by {convert h.2, simp} ⟩
+
+def fin_dim_of_finite_basis : finite_dimensional K V :=
+finite_dimensional.of_fg $ fg_of_finite_basis h
+
+lemma dim_eq_card : dim K V = fintype.card ι :=
+by rw [←h.mk_range_eq_dim, cardinal.fintype_card, set.card_range_of_injective (h.injective zero_ne_one)]
+
+end 
+
 
 universes u v w
 variables {K : Type u} {V : Type v} {ι : Type w} [decidable_eq ι]

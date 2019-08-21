@@ -23,6 +23,9 @@ variable (n : ℕ)
 
 instance : fintype (Q n) := by delta Q; apply_instance
 
+lemma card : fintype.card (Q n) = 2^n :=
+by simp [Q]
+
 instance : inhabited (Q n) := ⟨λ i, tt⟩
 
 instance coeffs_module (n) : module ℝ (Q n →₀ ℝ) := finsupp.module (Q n) ℝ
@@ -116,31 +119,6 @@ def V.has_add {n} : has_add (V n) := by apply_instance
 local attribute [instance, priority 100000]
   V.module V.add_comm_semigroup V.add_comm_monoid V.has_scalar V.has_add
 
-lemma dim_V {n : ℕ} : vector_space.dim ℝ (V n) = 2^n :=
-begin
-  induction n with n IH,
-  { apply dim_of_field },
-  { dunfold V,
-    rw [dim_prod, IH, pow_succ, two_mul] }
-end
-
-open finite_dimensional
-
-instance {n} : finite_dimensional ℝ (V n) :=
-begin
-  rw [finite_dimensional_iff_dim_lt_omega, dim_V],
-  convert cardinal.nat_lt_omega (2^n),
-  norm_cast
-end
-
-lemma findim_V {n} : findim ℝ (V n) = 2^n :=
-begin
-  have := findim_eq_dim ℝ (V n),
-  rw dim_V at this,
-  rw [← cardinal.nat_cast_inj, this],
-  simp [cardinal.monoid_pow_eq_cardinal_pow]
-end
-
 /-- The basis of V indexed by the hypercube.-/
 noncomputable def e : Π {n}, Q n → V n
 | 0     := λ _, (1:ℝ)
@@ -152,7 +130,6 @@ noncomputable def e : Π {n}, Q n → V n
 noncomputable def ε : Π {n : ℕ} (p : Q n), V n →ₗ[ℝ] ℝ
 | 0 _ := linear_map.id
 | (n+1) p := cond (p 0) ((ε $ p ∘ fin.succ).comp $ linear_map.fst _ _ _) ((ε $ p ∘ fin.succ).comp $ linear_map.snd _ _ _)
-
 
 lemma duality {n : ℕ} (p q : Q n) : ε p (e q) = if p = q then 1 else 0 :=
 begin
@@ -191,15 +168,20 @@ def dual_pair_e_ε (n) : dual_pair (@e n) (@ε n) :=
 { eval := duality,
   total := @epsilon_total _ }
 
-lemma e_linear_indep {n : ℕ} : linear_independent ℝ (@e n) :=
-(dual_pair_e_ε _).is_basis.1
+lemma dim_V' {n : ℕ} : vector_space.dim ℝ (V n) = ↑(2^n : ℕ) :=
+by convert dim_eq_card (dual_pair_e_ε _).is_basis using 1; rw Q.card 
 
-lemma injective_e {n} : injective (@e n) :=
-(dual_pair_e_ε _).is_basis.injective zero_ne_one
+lemma dim_V {n : ℕ} : vector_space.dim ℝ (V n) = 2^n :=
+by simpa [cardinal.monoid_pow_eq_cardinal_pow] using @dim_V' n
 
-lemma epsilon_of_mem_span {n : ℕ} {H : set $ Q n} {x : V n} (h : x ∈ submodule.span ℝ (e '' H)) :
-  ∀ p : Q n, ε p x ≠ 0 →  p ∈ H :=
-(dual_pair_e_ε _).mem_of_mem_span h
+open finite_dimensional
+
+instance {n} : finite_dimensional ℝ (V n) :=
+fin_dim_of_finite_basis (dual_pair_e_ε _).is_basis
+
+lemma findim_V {n} : findim ℝ (V n) = 2^n :=
+have _ := @dim_V' n,
+by rwa [←findim_eq_dim, cardinal.nat_cast_inj] at this
 
 /-- The linear operator f_n corresponding to Huang's matrix A_n. -/
 noncomputable def f : Π n, V n →ₗ[ℝ] V n
@@ -294,11 +276,11 @@ begin
     apply dim_V },
   have dimW : d ↥W = fintype.card ↥H,
   { have li : linear_independent ℝ (restrict e H) :=
-      linear_independent.comp e_linear_indep _ subtype.val_injective,
+      linear_independent.comp (dual_pair_e_ε _).is_basis.1 _ subtype.val_injective,
     have hdW := dim_span li,
     rw range_restrict at hdW,
     convert hdW,
-    rw [cardinal.mk_image_eq injective_e, cardinal.fintype_card] },
+    rw [cardinal.mk_image_eq ((dual_pair_e_ε _).is_basis.injective zero_ne_one), cardinal.fintype_card] },
   rw ← findim_eq_dim ℝ at ⊢ dim_le dim_add dimW,
   rw [← findim_eq_dim ℝ, ← findim_eq_dim ℝ] at dim_add,
   norm_cast at ⊢ dim_le dim_add dimW,
@@ -346,16 +328,15 @@ begin
   { intros p p_in,
     rw finsupp.mem_support_iff at p_in,
     rw set.mem_to_finset,
-    exact epsilon_of_mem_span y_mem_H p p_in },
+    exact (dual_pair_e_ε _).mem_of_mem_span y_mem_H p p_in },
   obtain ⟨q, H_max⟩ : ∃ q : Q (m+1), ∀ q' : Q (m+1), abs ((ε q' : _) y) ≤ abs (ε q y),
     from fintype.exists_max _,
   have H_q_pos : 0 < abs (ε q y),
   { contrapose! y_ne,
     exact epsilon_total (λ p,  abs_nonpos_iff.mp (le_trans (H_max p) y_ne)) },
-  refine ⟨q, epsilon_of_mem_span y_mem_H q (abs_pos_iff.mp H_q_pos), _⟩,
+  refine ⟨q, (dual_pair_e_ε _).mem_of_mem_span y_mem_H q (abs_pos_iff.mp H_q_pos), _⟩,
   let s := real.sqrt (m+1),
   suffices : s * abs (ε q y) ≤ ↑(_) * abs (ε q y),
     from (mul_le_mul_right H_q_pos).mp ‹_›,
-  let φ : V (m+1) → V (m+1) := f (m+1),
   apply calc_lemma; assumption
 end
