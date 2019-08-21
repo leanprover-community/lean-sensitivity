@@ -15,7 +15,7 @@ local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
 universes u v w
 variables {K : Type u} {V : Type v} {ι : Type w} [decidable_eq ι]
-variables [discrete_field K] [add_comm_group V] [vector_space K V] 
+variables [discrete_field K] [add_comm_group V] [vector_space K V]
           [decidable_eq V] [decidable_eq (ι → V)] [decidable_eq $ dual K V]
 
 
@@ -33,7 +33,7 @@ include  h
 /-- The coefficients of `v` on the basis `e` -/
 def dual_pair.coeffs (v : V) : ι →₀ K :=
 { to_fun := λ i, ε i v,
-  support := by { haveI := h.finite v, exact {i : ι | ε i v ≠ 0}.to_finset }, 
+  support := by { haveI := h.finite v, exact {i : ι | ε i v ≠ 0}.to_finset },
   mem_support_to_fun := by {intro i, rw set.mem_to_finset, exact iff.rfl } }
 
 omit h
@@ -74,7 +74,7 @@ begin
   simp [-sub_eq_add_neg, linear_map.map_sub, h.dual_lc, sub_eq_zero_iff_eq]
 end
 
-lemma dual_pair.mem_of_mem_span {H : set ι} {x : V} (hmem : x ∈ submodule.span K (e '' H)) : 
+lemma dual_pair.mem_of_mem_span {H : set ι} {x : V} (hmem : x ∈ submodule.span K (e '' H)) :
   ∀ i : ι, ε i x ≠ 0 →  i ∈ H :=
 begin
   intros i hi,
@@ -124,17 +124,8 @@ instance : directed_order ℝ :=
 { directed := λ i j, ⟨max i j, le_max_left _ _, le_max_right _ _⟩,
   ..real.linear_order }
 
-@[simp] lemma abs_nonpos_iff {α : Type*} [decidable_linear_ordered_comm_group α] {a : α} :
-  abs a ≤ 0 ↔ a = 0 :=
-by rw [← not_lt, abs_pos_iff, not_not]
-
-lemma fin.succ_ne_zero {n} (k : fin n) : fin.succ k ≠ 0 :=
-begin
-  cases k with k hk,
-  intro h,
-  have : k + 1 = 0 := (fin.ext_iff _ _).1 h,
-  finish
-end
+lemma fin.succ_ne_zero {n} : ∀ k : fin n, fin.succ k ≠ 0
+| ⟨k, hk⟩ heq := nat.succ_ne_zero k $ (fin.ext_iff _ _).1 heq
 
 lemma bxor_of_ne {x y : bool} (h : x ≠ y) : bxor x y = tt :=
 by cases x; cases y; refl <|> contradiction
@@ -176,10 +167,6 @@ by { ext x,  simp [restrict], refl }
 
 example {α} (s : finset α) (H_sub : s ⊆ ∅) : s = ∅ := finset.subset_empty.mp ‹_›
 
--- TODO(jesse): remove later
--- lemma finset.sum_remove_zeros {α β : Type*} [add_comm_group β] {s : finset α} {f : α → β} (t : finset α) (H_sub : t ⊆ s) (Ht : ∀ x ∈ s, f x = 0 ↔ x ∈ (s \ t)) : s.sum f = t.sum f :=
--- (@finset.sum_subset _ _ t s f _ ‹_› (by finish)).symm
-
 lemma finset.sum_factor_constant {α β : Type*} [field β] {s : finset α} (b : β) :
   (s.sum (λ x, b) = (s.sum (λ x, 1) * b)) := by rw [finset.sum_mul]; simp
 
@@ -192,11 +179,11 @@ def equiv_unique (α : Type*) (β : Type*) [unique α] [discrete_field β] :
   left_inv := λ f, (finsupp.unique_single _).symm,
   right_inv := λ b, finsupp.single_eq_same }
 
-lemma linear_map.map_finsupp_total {R : Type*} {β : Type*} {γ : Type*} [ring R] [decidable_eq R] 
+lemma linear_map.map_finsupp_total {R : Type*} {β : Type*} {γ : Type*} [ring R] [decidable_eq R]
   [add_comm_group β] [decidable_eq β] [module R β]
-  [add_comm_group γ] [decidable_eq γ] [module R γ] 
-  (f : β →ₗ[R] γ) 
-  {ι : Type*} [fintype ι] [decidable_eq ι] 
+  [add_comm_group γ] [decidable_eq γ] [module R γ]
+  (f : β →ₗ[R] γ)
+  {ι : Type*} [fintype ι] [decidable_eq ι]
   {g : ι → β} (l : ι →₀ R) : f (finsupp.total ι β R g l) = finsupp.total ι γ R (f ∘ g) l :=
 begin
   rw [finsupp.total_apply,
@@ -206,7 +193,7 @@ begin
   exact f.map_smul _ _,
 end
 
-lemma finset.sum_ite {α : Type*} [decidable_eq α] {β : Type*} [semiring β] (s : finset α) (P : set α) [decidable_pred P] [fintype ↥P] (f : α → β) : 
+lemma finset.sum_ite {α : Type*} [decidable_eq α] {β : Type*} [semiring β] (s : finset α) (P : set α) [decidable_pred P] [fintype ↥P] (f : α → β) :
   s.sum (λ a, (f a) * (if P a then 1 else 0)) = (s ∩ P.to_finset).sum f :=
 begin
   have : s ∩ P.to_finset ⊆ s,
@@ -266,7 +253,7 @@ begin
 end
 
 lemma fintype.exists_max {α : Type*} [fintype α] [nonempty α] {β : Type*} [decidable_linear_order β] (f : α → β) :
-  ∃ x₀ : α, ∀ x, f x ≤ f x₀ := 
+  ∃ x₀ : α, ∀ x, f x ≤ f x₀ :=
 begin
   let r := (set.range f).to_finset,
   obtain ⟨y, hy⟩ : ∃ y, y ∈ (set.range f).to_finset,
