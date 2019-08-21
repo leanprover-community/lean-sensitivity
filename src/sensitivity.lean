@@ -90,6 +90,8 @@ def V : ℕ → Type
 | 0 := ℝ
 | (n+1) := V n × V n
 
+instance (n) : decidable_eq (V n) := by {induction n; dunfold V; resetI; apply_instance }
+
 noncomputable instance : Π n, add_comm_group (V n) :=
 begin
   apply nat.rec,
@@ -151,6 +153,7 @@ noncomputable def ε : Π {n : ℕ} (p : Q n), V n →ₗ[ℝ] ℝ
 | 0 _ := linear_map.id
 | (n+1) p := cond (p 0) ((ε $ p ∘ fin.succ).comp $ linear_map.fst _ _ _) ((ε $ p ∘ fin.succ).comp $ linear_map.snd _ _ _)
 
+
 lemma duality {n : ℕ} (p q : Q n) : ε p (e q) = if p = q then 1 else 0 :=
 begin
   induction n with n IH,
@@ -184,67 +187,19 @@ begin
       rwa show p = q ∘ fin.succ, by { ext, simp [q, fin.succ_ne_zero] } } }
 end
 
-/-- The coefficients of `v` on the basis `e` -/
-def coeffs {n : ℕ} (v : V n) : Q n →₀ ℝ := finsupp.equiv_fun_on_fintype.inv_fun (λ p : Q n, ε p v)
-
-/-- linear combinations of elements of `e` -/
-def lc {n : ℕ} : (Q n →₀ ℝ) → V n := finsupp.total (Q n) (V n) ℝ e
-
-@[simp]
-lemma ε_lc {n : ℕ} (l : Q n →₀ ℝ) (p : Q n) : ε p (lc l) = l p :=
-begin
-  erw [lc, finsupp.total_apply, linear_map.map_sum],
-  simp only [duality, map_smul, smul_eq_mul],
-  rw finset.sum_eq_single p,
-  { simp },
-  { intros q q_in q_ne,
-    simp [q_ne.symm] },
-  { intro p_not_in,
-    simp [finsupp.not_mem_support_iff.1 p_not_in] }
-end
-
-@[simp]
-lemma coeffs_lc {n : ℕ} (l : Q n →₀ ℝ) : coeffs (lc l) = l :=
-begin
-  simp only [coeffs, ε_lc],
-  ext p,
-  refl
-end
-
-/-- For any v : V n, \sum_{p ∈ Q n} (ε p v) • e p = v -/
-lemma decomposition {n : ℕ} (v : V n) : lc (coeffs v) = v :=
-begin
-  refine eq_of_sub_eq_zero (epsilon_total _),
-  intros p,
-  simp [-sub_eq_add_neg,linear_map.map_sub, sub_eq_zero_iff_eq],
-  refl
-end
-
-lemma epsilon_of_mem_span {n : ℕ} {H : set $ Q n} {x : V n} (h : x ∈ submodule.span ℝ (e '' H)) : 
-  ∀ p : Q n, ε p x ≠ 0 →  p ∈ H :=
-begin
-  intros p hp,
-  rcases (finsupp.mem_span_iff_total _).mp h with ⟨l, supp_l, sum_l⟩,
-  change lc l = x at sum_l,
-  rw finsupp.mem_supported' at supp_l,
-  by_contradiction p_not,
-  apply hp,
-  rw ← sum_l,
-  simpa using supp_l p p_not, 
-end
+def dual_pair_e_ε (n) : dual_pair (@e n) (@ε n) :=
+{ eval := duality,
+  total := @epsilon_total _ }
 
 lemma e_linear_indep {n : ℕ} : linear_independent ℝ (@e n) :=
-begin
-  rw linear_independent_iff,
-  intros l h,
-  change lc l = 0 at h,
-  ext p,
-  apply_fun (ε p) at h,
-  simpa using h
-end
+(dual_pair_e_ε _).is_basis.1
 
 lemma injective_e {n} : injective (@e n) :=
-linear_independent.injective (by norm_num) e_linear_indep
+(dual_pair_e_ε _).is_basis.injective zero_ne_one
+
+lemma epsilon_of_mem_span {n : ℕ} {H : set $ Q n} {x : V n} (h : x ∈ submodule.span ℝ (e '' H)) :
+  ∀ p : Q n, ε p x ≠ 0 →  p ∈ H :=
+(dual_pair_e_ε _).mem_of_mem_span h
 
 /-- The linear operator f_n corresponding to Huang's matrix A_n. -/
 noncomputable def f : Π n, V n →ₗ[ℝ] V n
@@ -351,11 +306,43 @@ begin
   linarith
 end
 
+open dual_pair
+
+lemma calc_lemma {m : ℕ} (H : set (Q (m + 1))) (hH : fintype.card ↥H ≥ 2 ^ m + 1)
+  (y : V (m + 1)) (y_mem_g : y ∈ (range (g m)))
+  (coeffs_support : (dual_pair.coeffs (dual_pair_e_ε (m + 1)) y).support ⊆ set.to_finset H)
+  (q : Q (m + 1)) (H_max : ∀ (q' : Q (m + 1)), abs ((ε q').to_fun y) ≤ abs ((ε q) y))
+  (H_q_pos : 0 < abs ((ε q) y)) :
+  real.sqrt (↑m + 1) * abs ((ε q) y) ≤ ↑(finset.card (set.to_finset (H ∩ Q.adjacent q))) * abs ((ε q) y) :=
+let coeffs := (dual_pair_e_ε (m+1)).coeffs,
+    φ : V (m+1) → V (m+1) := f (m+1) in
+begin
+  set s := real.sqrt (↑m + 1),
+  calc
+    s * (abs (ε q y))
+        = abs (ε q (s • y)) : by rw [map_smul, smul_eq_mul, abs_mul, abs_of_nonneg (real.sqrt_nonneg _)]
+    ... = abs (ε q (φ y)) : by rw [← f_image_g y (by simpa using y_mem_g)]
+    ... = abs (ε q (φ (lc _ (coeffs y)))) : by rw (dual_pair_e_ε _).decomposition y
+    ... = abs ((coeffs y).sum (λ (i : Q (m + 1)) (a : ℝ), a • ((ε q) ∘ (f (m + 1)) ∘ λ (i : Q (m + 1)), e i) i)): by
+                  { dsimp only [φ],
+                    erw [(f $ m+1).map_finsupp_total, (ε q).map_finsupp_total, finsupp.total_apply] ; apply_instance }
+    ... ≤ (coeffs y).support.sum (λ p,
+           abs ((coeffs y p) * (ε q $ φ $ e p))) : norm_triangle_sum _ $ λ p, coeffs y p * _
+    ... = (coeffs y).support.sum (λ p, abs (coeffs y p) * ite (q.adjacent p) 1 0) : by simp only [abs_mul, f_matrix]
+    ... = ((coeffs y).support ∩ (Q.adjacent q).to_finset).sum (λ p, abs (coeffs y p)) : finset.sum_ite _ _ _
+    ... ≤ ((coeffs y).support ∩ (Q.adjacent q).to_finset).sum (λ p, abs (coeffs y q)) : finset.sum_le_sum (λ p _, H_max p)
+    ... = (finset.card ((coeffs y).support ∩ (Q.adjacent q).to_finset): ℝ) * abs (coeffs y q) : by rw [← smul_eq_mul, ← finset.sum_const']
+    ... ≤ (finset.card ((H ∩ Q.adjacent q).to_finset )) * abs (ε q y) :
+     (mul_le_mul_right H_q_pos).mpr (by {
+             norm_cast,
+             exact finset.card_le_of_subset (by rw finset.to_finset_inter ; apply finset.inter_subset_inter_left coeffs_support) })
+end
+
 theorem degree_theorem :
   ∃ q, q ∈ H ∧ real.sqrt (m + 1) ≤ (H ∩ q.adjacent).to_finset.card :=
 begin
   rcases exists_eigenvalue H hH with ⟨y, ⟨⟨y_mem_H, y_mem_g⟩, y_ne⟩⟩,
-  have coeffs_support : (coeffs y).support ⊆ H.to_finset,
+  have coeffs_support : ((dual_pair_e_ε (m+1)).coeffs y).support ⊆ H.to_finset,
   { intros p p_in,
     rw finsupp.mem_support_iff at p_in,
     rw set.mem_to_finset,
@@ -370,21 +357,5 @@ begin
   suffices : s * abs (ε q y) ≤ ↑(_) * abs (ε q y),
     from (mul_le_mul_right H_q_pos).mp ‹_›,
   let φ : V (m+1) → V (m+1) := f (m+1),
-  calc
-    s * (abs (ε q y))
-        = abs (ε q (s • y)) : by rw [map_smul, smul_eq_mul, abs_mul, abs_sqrt_nat]
-    ... = abs (ε q (φ y)) : by rw [← f_image_g y (by simpa using y_mem_g)]
-    ... = abs (ε q (φ (lc (coeffs y)))) : by rw decomposition y
-    ... = abs ((coeffs y).sum (λ (i : Q (m + 1)) (a : ℝ), a • ((ε q) ∘ (f (m + 1)) ∘ λ (i : Q (m + 1)), e i) i)): by
-                  { dsimp only [φ],
-                    erw [(f $ m+1).map_finsupp_total, (ε q).map_finsupp_total, finsupp.total_apply] ; apply_instance } 
-    ... ≤ (coeffs y).support.sum (λ p,
-           abs ((coeffs y p) * (ε q $ φ $ e p))) : abs_triangle_sum
-    ... = (coeffs y).support.sum (λ p, abs (coeffs y p) * ite (q.adjacent p) 1 0) : by simp only [abs_mul, f_matrix]
-    ... = ((coeffs y).support ∩ (Q.adjacent q).to_finset).sum (λ p, abs (coeffs y p)) : finset.sum_ite _ _ _
-    ... ≤ ((coeffs y).support ∩ (Q.adjacent q).to_finset).sum (λ p, abs (coeffs y q)) : finset.sum_le_sum (λ p _, H_max p)
-    ... = (finset.card ((coeffs y).support ∩ (Q.adjacent q).to_finset): ℝ) * abs (coeffs y q) : by rw [← smul_eq_mul, ← finset.sum_const']
-    ... ≤ (finset.card ((H ∩ Q.adjacent q).to_finset )) * abs (ε q y) : (mul_le_mul_right H_q_pos).mpr (by {
-             norm_cast,
-             exact finset.card_le_of_subset (by rw finset.inter_to_finset ; apply finset.inter_subset_inter_left coeffs_support) })
+  apply calc_lemma; assumption
 end
