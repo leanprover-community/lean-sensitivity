@@ -114,31 +114,31 @@ end
 
 end duality
 
+-- PRed
 attribute [elim_cast] cardinal.nat_cast_inj
 attribute [elim_cast] cardinal.nat_cast_lt
 attribute [elim_cast] cardinal.nat_cast_le
 
+-- PRed
 lemma ne.symm_iff {α} {a b : α} : a ≠ b ↔ b ≠ a := ⟨ne.symm, ne.symm⟩
 
-instance : directed_order ℝ :=
+-- not needed
+/- instance : directed_order ℝ :=
 { directed := λ i j, ⟨max i j, le_max_left _ _, le_max_right _ _⟩,
-  ..real.linear_order }
+  ..real.linear_order } -/
 
+-- PRed
 lemma fin.succ_ne_zero {n} : ∀ k : fin n, fin.succ k ≠ 0
 | ⟨k, hk⟩ heq := nat.succ_ne_zero k $ (fin.ext_iff _ _).1 heq
 
+-- PRed
 lemma bxor_of_ne {x y : bool} (h : x ≠ y) : bxor x y = tt :=
 by cases x; cases y; refl <|> contradiction
-
-lemma iff.eq_cancel_left {α : Type*} {a b c : α} (h : b = c) :
-  (a = b ↔ a = c) := by rw h
-
-lemma iff.eq_cancel_right {α : Type*} {a b c : α} (h : a = b) :
-  (a = c ↔ b = c) := by rw h
 
 section cardinal_lemma
 universe u
 
+-- PRed
 lemma cardinal.monoid_pow_eq_cardinal_pow {κ : cardinal.{u}} {n : ℕ} : κ ^ n = (κ ^ (↑n : cardinal.{u})) :=
 begin
   induction n with n ih,
@@ -148,36 +148,22 @@ end
 
 end cardinal_lemma
 
-lemma abs_sqrt_nat {m : ℕ} : abs (real.sqrt (↑m + 1) : ℝ) = real.sqrt (↑m + 1) :=
-  abs_of_pos $ real.sqrt_pos.mpr $ nat.cast_add_one_pos m
-
-lemma finset.card_eq_sum_ones {α} (s : finset α) : s.card = (s.sum $ λ _, 1) :=
-by simp
-
-lemma fintype.card_eq_sum_ones {α} [fintype α] : fintype.card α = (fintype.elems α).sum (λ _, 1) :=
-finset.card_eq_sum_ones _
-
-lemma refold_coe {α β γ} [ring α] [add_comm_group γ] [add_comm_group β] [module α β] [module α γ] {f : β →ₗ[α] γ} : f.to_fun = ⇑f := rfl
-
-lemma abs_triangle_sum {α : Type*} {s : finset α} {f : α → ℝ} : abs (s.sum f) ≤ (s.sum (λ x, abs (f x))) :=
-(norm_triangle_sum _ _ : ∥ _ ∥ ≤ finset.sum s (λ x, ∥ f x∥))
-
-lemma range_restrict {α : Type*} {β : Type*} (f : α → β) (p : α → Prop) : set.range (restrict f p) = f '' (p : set α) :=
+-- PRed
+lemma range_restrict {α : Type*} {β : Type*} (f : α → β) (p : α → Prop) :
+  set.range (restrict f p) = f '' (p : set α) :=
 by { ext x,  simp [restrict], refl }
 
 example {α} (s : finset α) (H_sub : s ⊆ ∅) : s = ∅ := finset.subset_empty.mp ‹_›
 
-lemma finset.sum_factor_constant {α β : Type*} [field β] {s : finset α} (b : β) :
-  (s.sum (λ x, b) = (s.sum (λ x, 1) * b)) := by rw [finset.sum_mul]; simp
-
-def equiv_unique (α : Type*) (β : Type*) [unique α] [discrete_field β] :
+-- unused. not sure if or where this belongs in mathlib
+/- def equiv_unique (α : Type*) (β : Type*) [unique α] [discrete_field β] :
   (α →₀ β) ≃ₗ[β] β :=
 { to_fun := λ f, f (default α),
   inv_fun := finsupp.single (default α),
   add := λ f g, finsupp.add_apply,
   smul := λ b f, rfl,
   left_inv := λ f, (finsupp.unique_single _).symm,
-  right_inv := λ b, finsupp.single_eq_same }
+  right_inv := λ b, finsupp.single_eq_same } -/
 
 lemma linear_map.map_finsupp_total {R : Type*} {β : Type*} {γ : Type*} [ring R] [decidable_eq R]
   [add_comm_group β] [decidable_eq β] [module R β]
@@ -193,7 +179,8 @@ begin
   exact f.map_smul _ _,
 end
 
-lemma finset.sum_ite {α : Type*} [decidable_eq α] {β : Type*} [semiring β] (s : finset α) (P : set α) [decidable_pred P] [fintype ↥P] (f : α → β) :
+lemma finset.sum_ite {α : Type*} [decidable_eq α] {β : Type*} [semiring β] (s : finset α)
+  (P : set α) [decidable_pred P] [fintype ↥P] (f : α → β) :
   s.sum (λ a, (f a) * (if P a then 1 else 0)) = (s ∩ P.to_finset).sum f :=
 begin
   have : s ∩ P.to_finset ⊆ s,
@@ -212,18 +199,19 @@ begin
     exact ⟨x_in, set.mem_to_finset.mpr hPx⟩ },
 end
 
-
 section
 
 local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
-lemma finset.inter_to_finset {α : Type*} [fintype α] (s t : set α) [decidable_eq α] :
-  (s ∩ t).to_finset =  s.to_finset ∩ t.to_finset :=
+-- type class problems adding this to mathlib at data/set/finite
+lemma finset.to_finset_inter {α : Type*} [fintype α] (s t : set α) [decidable_eq α] :
+  (s ∩ t).to_finset = s.to_finset ∩ t.to_finset :=
 by { ext x, simp }
 
 end
 
+-- PRed
 lemma finset.inter_subset_inter {α : Type*} [decidable_eq α] {x y s t : finset α} (h : x ⊆ y) (h' : s ⊆ t) : x ∩ s ⊆ y ∩ t :=
 begin
   intros a a_in,
@@ -231,9 +219,11 @@ begin
   exact ⟨h a_in.1, h' a_in.2⟩
 end
 
+-- PRed
 lemma finset.inter_subset_inter_left {α : Type*} [decidable_eq α] {x y s : finset α} (h : x ⊆ y) : x ∩ s ⊆ y ∩ s :=
 finset.inter_subset_inter h (finset.subset.refl _)
 
+-- PRed
 lemma finset.inter_subset_inter_right {α : Type*} [decidable_eq α] {x y s : finset α} (h : x ⊆ y) : s ∩ x ⊆ s ∩ y :=
 finset.inter_subset_inter (finset.subset.refl _) h
 
