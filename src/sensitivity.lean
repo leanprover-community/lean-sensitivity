@@ -137,7 +137,7 @@ begin
 end
 
 @[symm] lemma adjacent.symm {p q : Q n} : p.adjacent q ↔ q.adjacent p :=
-by simp only [adjacent, ne.symm_iff]
+by simp only [adjacent, ne_comm]
 
 end Q
 
@@ -240,6 +240,9 @@ by assumption_mod_cast
 
 instance : finite_dimensional ℝ (V n) :=
 fin_dim_of_finite_basis (dual_pair_e_ε _).is_basis
+
+-- TODO: fix this in mathlib, if it's really wrong
+local attribute [-elim_cast] cardinal.nat_cast_pow
 
 lemma findim_V : findim ℝ (V n) = 2^n :=
 have _ := @dim_V n,
@@ -368,7 +371,7 @@ begin
   { have li : linear_independent ℝ (restrict e H) :=
       linear_independent.comp (dual_pair_e_ε _).is_basis.1 _ subtype.val_injective,
     have hdW := dim_span li,
-    rw range_restrict at hdW,
+    rw set.range_restrict at hdW,
     convert hdW,
     rw [cardinal.mk_image_eq ((dual_pair_e_ε _).is_basis.injective zero_ne_one), cardinal.fintype_card] },
   rw ← findim_eq_dim ℝ at ⊢ dim_le dim_add dimW,
@@ -417,5 +420,5 @@ begin
     ... ≤ (finset.card ((H ∩ Q.adjacent q).to_finset )) * |ε q y| :
      (mul_le_mul_right H_q_pos).mpr (by {
              norm_cast,
-             exact finset.card_le_of_subset (by rw finset.to_finset_inter ; apply finset.inter_subset_inter_left coeffs_support) })
+             exact finset.card_le_of_subset (by rw finset.to_finset_inter ; apply finset.inter_subset_inter_right coeffs_support) })
 end
