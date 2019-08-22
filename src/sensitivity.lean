@@ -172,9 +172,10 @@ def add_comm_monoid : add_comm_monoid (V n) := by apply_instance
 def has_scalar : has_scalar ℝ (V n) := by apply_instance
 def has_add : has_add (V n) := by apply_instance
 
+end V
+
 local attribute [instance, priority 100000]
   V.module V.add_comm_semigroup V.add_comm_monoid V.has_scalar V.has_add
-end V
 
 /-- The basis of V indexed by the hypercube, defined inductively. -/
 noncomputable def e : Π {n}, Q n → V n
