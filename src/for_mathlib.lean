@@ -14,13 +14,13 @@ open vector_space module module.dual linear_map function
 local attribute [instance, priority 1] classical.prop_decidable
 local attribute [instance, priority 0] set.decidable_mem_of_fintype
 
-section 
+section
 
-open module vector_space 
+open module vector_space
 
 universes u v w
 variables {K : Type u} {V : Type v} {ι : Type w} [decidable_eq ι] [fintype ι] [decidable_eq V]
-variables [discrete_field K] [add_comm_group V] [vector_space K V] 
+variables [discrete_field K] [add_comm_group V] [vector_space K V]
 variables {b : ι → V} (h : is_basis K b)
 include h
 
@@ -31,9 +31,10 @@ def fin_dim_of_finite_basis : finite_dimensional K V :=
 finite_dimensional.of_fg $ fg_of_finite_basis h
 
 lemma dim_eq_card : dim K V = fintype.card ι :=
-by rw [←h.mk_range_eq_dim, cardinal.fintype_card, set.card_range_of_injective (h.injective zero_ne_one)]
+by rw [←h.mk_range_eq_dim, cardinal.fintype_card,
+       set.card_range_of_injective (h.injective zero_ne_one)]
 
-end 
+end
 
 
 universes u v w
@@ -130,8 +131,7 @@ omit h
 lemma dual_pair.eq_dual  : ε = is_basis.dual_basis h.is_basis :=
 begin
   funext i,
-  refine h.is_basis.ext _,
-  intro j,
+  refine h.is_basis.ext (λ _, _),
   erw [is_basis.to_dual_apply, h.eval]
 end
 
@@ -142,7 +142,7 @@ attribute [elim_cast] cardinal.nat_cast_inj
 attribute [elim_cast] cardinal.nat_cast_lt
 attribute [elim_cast] cardinal.nat_cast_le
 
--- PRed
+-- PRed as ne_comm
 lemma ne.symm_iff {α} {a b : α} : a ≠ b ↔ b ≠ a := ⟨ne.symm, ne.symm⟩
 
 -- not needed
@@ -154,14 +154,14 @@ lemma ne.symm_iff {α} {a b : α} : a ≠ b ↔ b ≠ a := ⟨ne.symm, ne.symm�
 lemma fin.succ_ne_zero {n} : ∀ k : fin n, fin.succ k ≠ 0
 | ⟨k, hk⟩ heq := nat.succ_ne_zero k $ (fin.ext_iff _ _).1 heq
 
--- PRed
-lemma bxor_of_ne {x y : bool} (h : x ≠ y) : bxor x y = tt :=
-by cases x; cases y; refl <|> contradiction
+-- PRed (as iff)
+/- lemma bxor_of_ne {x y : bool} (h : x ≠ y) : bxor x y = tt :=
+by cases x; cases y; refl <|> contradiction -/
 
 section cardinal_lemma
 universe u
 
--- PRed
+-- PRed as pow_cast_right (reverse order, simp)
 lemma cardinal.monoid_pow_eq_cardinal_pow {κ : cardinal.{u}} {n : ℕ} : κ ^ n = (κ ^ (↑n : cardinal.{u})) :=
 begin
   induction n with n ih,
@@ -171,7 +171,7 @@ end
 
 end cardinal_lemma
 
--- PRed
+-- PRed (p changed to set α)
 lemma range_restrict {α : Type*} {β : Type*} (f : α → β) (p : α → Prop) :
   set.range (restrict f p) = f '' (p : set α) :=
 by { ext x,  simp [restrict], refl }
@@ -242,11 +242,11 @@ begin
   exact ⟨h a_in.1, h' a_in.2⟩
 end
 
--- PRed
+-- PRed, left -> right
 lemma finset.inter_subset_inter_left {α : Type*} [decidable_eq α] {x y s : finset α} (h : x ⊆ y) : x ∩ s ⊆ y ∩ s :=
 finset.inter_subset_inter h (finset.subset.refl _)
 
--- PRed
+-- PRed, right -> left
 lemma finset.inter_subset_inter_right {α : Type*} [decidable_eq α] {x y s : finset α} (h : x ⊆ y) : s ∩ x ⊆ s ∩ y :=
 finset.inter_subset_inter (finset.subset.refl _) h
 
