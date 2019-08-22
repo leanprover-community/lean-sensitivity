@@ -233,19 +233,17 @@ def dual_pair_e_ε (n : ℕ) : dual_pair (@e n) (@ε n) :=
 -- We will now derive the dimension of V, first as a cardinal in dim_V and,
 -- since this cardinal is finite, as a natural number in findim_V
 
-lemma dim_V' : vector_space.dim ℝ (V n) = ↑(2^n : ℕ) :=
-by convert dim_eq_card (dual_pair_e_ε _).is_basis using 1; rw Q.card
-
 lemma dim_V : vector_space.dim ℝ (V n) = 2^n :=
-by simpa [cardinal.monoid_pow_eq_cardinal_pow] using @dim_V' n
+have vector_space.dim ℝ (V n) = ↑(2^n : ℕ),
+  by convert dim_eq_card (dual_pair_e_ε _).is_basis using 1; rw Q.card,
+by assumption_mod_cast
 
 instance : finite_dimensional ℝ (V n) :=
 fin_dim_of_finite_basis (dual_pair_e_ε _).is_basis
 
 lemma findim_V : findim ℝ (V n) = 2^n :=
-have _ := @dim_V' n,
-by rwa [←findim_eq_dim, cardinal.nat_cast_inj] at this
-
+have _ := @dim_V n,
+by rw [←findim_eq_dim] at this; assumption_mod_cast
 
 /- -------------------------------------------------------------------------\
 |  The linear map.                                                          |
