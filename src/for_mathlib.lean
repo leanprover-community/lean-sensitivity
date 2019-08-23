@@ -147,57 +147,6 @@ end
 
 end duality
 
--- PRed
-attribute [elim_cast] cardinal.nat_cast_inj
-attribute [elim_cast] cardinal.nat_cast_lt
-attribute [elim_cast] cardinal.nat_cast_le
-
--- PRed as ne_comm
-lemma ne.symm_iff {α} {a b : α} : a ≠ b ↔ b ≠ a := ⟨ne.symm, ne.symm⟩
-
--- not needed
-/- instance : directed_order ℝ :=
-{ directed := λ i j, ⟨max i j, le_max_left _ _, le_max_right _ _⟩,
-  ..real.linear_order } -/
-
--- PRed
-lemma fin.succ_ne_zero {n} : ∀ k : fin n, fin.succ k ≠ 0
-| ⟨k, hk⟩ heq := nat.succ_ne_zero k $ (fin.ext_iff _ _).1 heq
-
--- PRed (as iff)
-/- lemma bxor_of_ne {x y : bool} (h : x ≠ y) : bxor x y = tt :=
-by cases x; cases y; refl <|> contradiction -/
-
-section cardinal_lemma
-universe u
-
--- PRed as pow_cast_right (reverse order, simp)
-lemma cardinal.monoid_pow_eq_cardinal_pow {κ : cardinal.{u}} {n : ℕ} : κ ^ n = (κ ^ (↑n : cardinal.{u})) :=
-begin
-  induction n with n ih,
-  { simp },
-  { rw[nat.cast_succ, cardinal.power_add, ← ih, cardinal.power_one, mul_comm], refl }
-end
-
-end cardinal_lemma
-
--- PRed (p changed to set α)
-lemma range_restrict {α : Type*} {β : Type*} (f : α → β) (p : α → Prop) :
-  set.range (restrict f p) = f '' (p : set α) :=
-by { ext x,  simp [restrict], refl }
-
-example {α} (s : finset α) (H_sub : s ⊆ ∅) : s = ∅ := finset.subset_empty.mp ‹_›
-
--- unused. not sure if or where this belongs in mathlib
-/- def equiv_unique (α : Type*) (β : Type*) [unique α] [discrete_field β] :
-  (α →₀ β) ≃ₗ[β] β :=
-{ to_fun := λ f, f (default α),
-  inv_fun := finsupp.single (default α),
-  add := λ f g, finsupp.add_apply,
-  smul := λ b f, rfl,
-  left_inv := λ f, (finsupp.unique_single _).symm,
-  right_inv := λ b, finsupp.single_eq_same } -/
-
 lemma linear_map.map_finsupp_total {R : Type*} {β : Type*} {γ : Type*} [ring R] [decidable_eq R]
   [add_comm_group β] [decidable_eq β] [module R β]
   [add_comm_group γ] [decidable_eq γ] [module R γ]
@@ -213,7 +162,7 @@ begin
 end
 
 lemma finset.sum_ite {α : Type*} [decidable_eq α] {β : Type*} [semiring β] (s : finset α)
-  (P : set α) [decidable_pred P] [fintype ↥P] (f : α → β) :
+  (P : set α) [decidable_pred P] [fintype P] (f : α → β) :
   s.sum (λ a, (f a) * (if P a then 1 else 0)) = (s ∩ P.to_finset).sum f :=
 begin
   have : s ∩ P.to_finset ⊆ s,
@@ -243,22 +192,6 @@ lemma finset.to_finset_inter {α : Type*} [fintype α] (s t : set α) [decidable
 by { ext x, simp }
 
 end
-
--- PRed
-lemma finset.inter_subset_inter {α : Type*} [decidable_eq α] {x y s t : finset α} (h : x ⊆ y) (h' : s ⊆ t) : x ∩ s ⊆ y ∩ t :=
-begin
-  intros a a_in,
-  rw finset.mem_inter at a_in ⊢,
-  exact ⟨h a_in.1, h' a_in.2⟩
-end
-
--- PRed, left -> right
-lemma finset.inter_subset_inter_left {α : Type*} [decidable_eq α] {x y s : finset α} (h : x ⊆ y) : x ∩ s ⊆ y ∩ s :=
-finset.inter_subset_inter h (finset.subset.refl _)
-
--- PRed, right -> left
-lemma finset.inter_subset_inter_right {α : Type*} [decidable_eq α] {x y s : finset α} (h : x ⊆ y) : s ∩ x ⊆ s ∩ y :=
-finset.inter_subset_inter (finset.subset.refl _) h
 
 lemma module.smul_eq_smul {R : Type*} [ring R] {β : Type*} [add_comm_group β] [module R β] (n : ℕ) (b : β) :
     n • b = (n : R) • b :=
