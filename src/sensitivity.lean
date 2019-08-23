@@ -42,7 +42,7 @@ bool = {tt, ff}.
 -/
 
 /-- The hypercube in dimension n. -/
-def Q (n : ℕ) : Type := fin n → bool
+def Q (n : ℕ) := fin n → bool
 
 /-- The projection from Q (n + 1) to Q n forgetting the first value
 (ie. the image of zero). -/
@@ -89,7 +89,7 @@ end
 p.adjacent q if there is an edge from p to q in Q n -/
 def adjacent {n : ℕ} (p : Q n) : set (Q n) := λ q, ∃! i, p i ≠ q i
 
-/-- In Q 0 no two vertices are adjacent. -/
+/-- In Q 0, no two vertices are adjacent. -/
 lemma not_adjacent_zero (p q : Q 0) : ¬ p.adjacent q :=
 by rintros ⟨v, _⟩; apply fin_zero_elim v
 
@@ -244,7 +244,7 @@ fin_dim_of_finite_basis (dual_pair_e_ε _).is_basis
 
 lemma findim_V : findim ℝ (V n) = 2^n :=
 have _ := @dim_V n,
-by rw [←findim_eq_dim] at this; assumption_mod_cast
+by rw ←findim_eq_dim at this; assumption_mod_cast
 
 /- -------------------------------------------------------------------------\
 |  The linear map.                                                          |
@@ -274,8 +274,9 @@ begin
   exact ⟨rfl, rfl⟩
 end
 
--- In the next statement, rhe (n : ℝ) is necessary since `n • v` refers to the
--- multiplication defined using only the addition of V.
+-- In the next statement, the explicit conversion (n : ℝ) of n to a real number
+-- is necessary since otherwise `n • v` refers to the multiplication defined
+-- using only the addition of V.
 
 lemma f_squared : ∀ v : V n, (f n) (f n v) = (n : ℝ) • v :=
 begin
@@ -288,7 +289,7 @@ end
 -- q the column index.)
 
 lemma f_matrix :
-  ∀ (p q : Q n), |ε q (f n (e p))| = if q.adjacent p then 1 else 0 :=
+  ∀ p q : Q n, |ε q (f n (e p))| = if q.adjacent p then 1 else 0 :=
 begin
   induction n with n IH,
   { intros p q,
@@ -306,8 +307,7 @@ begin
       congr' 1 } }
 end
 
-/-- The linear operator g_n corresponding to Knuth's matrix B_n. In order to
-enforce that n is positive, we write it as m + 1 for some natural number m. -/
+/-- The linear operator g_m corresponding to Knuth's matrix B_m. -/
 noncomputable def g (m : ℕ) : V m →ₗ[ℝ] V (m+1) :=
 linear_map.pair (f m + √(m+1) • linear_map.id) linear_map.id
 
@@ -318,7 +318,7 @@ variables {m : ℕ}
 lemma g_apply : ∀ v, g m v = (f m v + √(m+1) • v, v) :=
 by delta g; simp
 
-lemma g_injective : function.injective (g m) :=
+lemma g_injective : injective (g m) :=
 begin
   rw g,
   intros x₁ x₂ h,
@@ -339,10 +339,8 @@ end
 |  The main proof.                                                          |
 \---------------------------------------------------------------------------/
 
--- in the following, H will denote a subset of Q (m + 1) with cardinal
--- at least 2^m + 1
---variables (H : set (Q (m + 1))) (hH : card H ≥ 2^m + 1)
---include hH
+-- In this section, in order to enforce that n is positive, we write it as
+-- m + 1 for some natural number m.
 
 -- dim X will denote the dimension of a subspace X as a cardinal
 notation `dim` X:70 := vector_space.dim ℝ ↥X
@@ -360,7 +358,7 @@ notation `Card` X:70 := X.to_finset.card
 -- equipped with their subspace structures. The notations come from the general
 -- theory of lattices, with inf and sup (also known as meet and join).
 
-/-- If a subset H of Q (m+1) has cardinal at least 2^m + 1then the
+/-- If a subset H of Q (m+1) has cardinal at least 2^m + 1 then the
 subspace of V (m+1) spanned by the corresponding basis vectors non-trivially
 intersects the range of g m. -/
 lemma exists_eigenvalue (H : set (Q (m + 1))) (hH : Card H ≥ 2^m + 1) :
