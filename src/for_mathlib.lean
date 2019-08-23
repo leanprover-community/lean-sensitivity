@@ -8,6 +8,16 @@ noncomputable theory
 
 open function
 
+section
+local attribute [instance, priority 1] classical.prop_decidable
+local attribute [instance, priority 0] set.decidable_mem_of_fintype
+
+-- The next proof was found by `library_search`, there may be a more direct one
+lemma set.to_finset_card {α : Type*} [fintype α] (H : set α) :
+  H.to_finset.card = fintype.card H :=
+multiset.card_map subtype.val (finset.univ.val)
+end
+
 section duality
 open vector_space module module.dual linear_map function
 

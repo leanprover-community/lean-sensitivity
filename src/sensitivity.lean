@@ -341,23 +341,36 @@ end
 
 -- in the following, H will denote a subset of Q (m + 1) with cardinal
 -- at least 2^m + 1
-variables (H : set (Q (m + 1))) (hH : card H ≥ 2^m + 1)
-include hH
+--variables (H : set (Q (m + 1))) (hH : card H ≥ 2^m + 1)
+--include hH
 
 -- dim X will denote the dimension of a subspace X as a cardinal
-local notation `dim` X:70 := vector_space.dim ℝ ↥X
+notation `dim` X:70 := vector_space.dim ℝ ↥X
 -- fdim X will denote the (finite) dimension of a subspace X as a natural number
-local notation `fdim` := findim ℝ
+notation `fdim` := findim ℝ
 
-lemma exists_eigenvalue :
-  ∃ y ∈ submodule.span ℝ (e '' H) ⊓ (g m).range, y ≠ (0 : _) :=
+-- Span S will denote the ℝ-subspace spanned by S
+notation `Span` := submodule.span ℝ
+
+-- Card X will denote the cardinal of a subset of a finite type, as a
+-- natural number.
+notation `Card` X:70 := X.to_finset.card
+
+-- In the following, ⊓ and ⊔ will denote intersection and sums of ℝ-subspaces,
+-- equipped with their subspace structures. The notations come from the general
+-- theory of lattices, with inf and sup (also known as meet and join).
+
+/-- If a subset H of Q (m+1) has cardinal at least 2^m + 1then the
+subspace of V (m+1) spanned by the corresponding basis vectors non-trivially
+intersects the range of g m. -/
+lemma exists_eigenvalue (H : set (Q (m + 1))) (hH : Card H ≥ 2^m + 1) :
+  ∃ y ∈ Span (e '' H) ⊓ (g m).range, y ≠ (0 : _) :=
 begin
-  let W := submodule.span ℝ (e '' H),
+  let W := Span (e '' H),
   let img := (g m).range,
   suffices : 0 < dim (W ⊓ img),
   { simp only [exists_prop],
-    apply exists_mem_ne_zero_of_dim_pos,
-    exact_mod_cast this },
+    exact_mod_cast exists_mem_ne_zero_of_dim_pos this },
   have dim_le : dim (W ⊔ img) ≤ 2^(m + 1),
   { convert ← dim_submodule_le (W ⊔ img),
     apply dim_V },
@@ -376,11 +389,12 @@ begin
   rw [← findim_eq_dim ℝ, ← findim_eq_dim ℝ] at dim_add,
   norm_cast at ⊢ dim_le dim_add dimW,
   rw nat.pow_succ at dim_le,
+  rw set.to_finset_card at hH,
   linarith
 end
 
-theorem huang_degree_theorem :
-  ∃ q, q ∈ H ∧ √(m + 1) ≤ (H ∩ q.adjacent).to_finset.card :=
+theorem huang_degree_theorem (H : set (Q (m + 1))) (hH : Card H ≥ 2^m + 1) :
+  ∃ q, q ∈ H ∧ √(m + 1) ≤ Card (H ∩ q.adjacent) :=
 begin
   rcases exists_eigenvalue H hH with ⟨y, ⟨⟨y_mem_H, y_mem_g⟩, y_ne⟩⟩,
   have coeffs_support : ((dual_pair_e_ε (m+1)).coeffs y).support ⊆ H.to_finset,
