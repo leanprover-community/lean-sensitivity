@@ -93,7 +93,7 @@ def adjacent {n : ℕ} (p : Q n) : set (Q n) := λ q, ∃! i, p i ≠ q i
 lemma not_adjacent_zero (p q : Q 0) : ¬ p.adjacent q :=
 by rintros ⟨v, _⟩; apply fin_zero_elim v
 
-/-- If p and q in Q (n+1) have different value at zero then they are adjacent
+/-- If p and q in Q (n+1) have different values at zero then they are adjacent
 iff their projections to Q n are equal. -/
 lemma adj_succ_of_zero_neq {p q : Q (n+1)} (h₀ : p 0 ≠ q 0) :
   p.adjacent q ↔ π p = π q :=
@@ -164,7 +164,7 @@ by { induction n ; { dunfold V, resetI, apply_instance } }
 instance : vector_space ℝ (V n) :=
 by { induction n ; { dunfold V, resetI, apply_instance } }
 
--- The next five definitions are short circuts helping Lean to quickly find
+-- The next five definitions are short circuits helping Lean to quickly find
 -- relevant structures on V n
 def module : module ℝ (V n) := by apply_instance
 def add_comm_semigroup : add_comm_semigroup (V n) := by apply_instance
@@ -263,8 +263,8 @@ noncomputable def f : Π n, V n →ₗ[ℝ] V n
              (linear_map.copair linear_map.id (-f n))
 
 -- The preceding definition use linear map constructions to automatically
--- get that f is linear, but its values are somewhat buried as a side-effet.
--- The next two lemmas unburry them.
+-- get that f is linear, but its values are somewhat buried as a side-effect.
+-- The next two lemmas unbury them.
 
 @[simp] lemma f_zero : f 0 = 0 := rfl
 
