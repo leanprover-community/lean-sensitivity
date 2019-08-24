@@ -4,7 +4,7 @@ dimension n ≥ 1, if one colors more than half the vertices then at least one
 vertex has at least √n colored neighbors.
 
 A fun summer collaboration by
-Reid Barton, Johan Commelin, Jesse Han, Chris Hugues, Rob Lewis, and Patrick Massot,
+Reid Barton, Johan Commelin, Jesse Han, Chris Hughes, Rob Lewis, and Patrick Massot,
 based on Don Knuth's account of the story
 (https://www.cs.stanford.edu/~knuth/papers/huang.pdf),
 using the Lean theorem prover (http://leanprover.github.io/),
